@@ -28,27 +28,36 @@ You are building the DEUS QUANT Portfolio System. Follow the documentation in `d
 5. Verify all metrics are extracted correctly
 6. Commit: "Phase 3: MT5 parsers complete"
 
-### PHASE 4: Forward Test Integration
-1. Create CSV parser for forward tests
-2. Implement BacktestForwardMerger class
-3. Test merging with sample data
-4. Verify date alignment and calculations
-5. Commit: "Phase 4: Forward test integration complete"
+### PHASE 4: Dashboard Components & Data Loader
+1. Create `lib/data/loader.ts` to load strategies from `data/` directory
+2. Create Logo component with DEUS QUANT branding
+3. Build Header with time display
+4. Implement EquityCurve chart
+5. Create StatsPanel with metric cards
+6. Update dashboard page to use loader (server component)
+7. Test all components render with data from files
+8. Commit: "Phase 4: Dashboard components and data loader complete"
 
-### PHASE 5: Upload System
-1. Create FileUploader component with drag & drop
-2. Implement upload API endpoints
-3. Add progress indicators and validation
-4. Test file uploads end-to-end
-5. Commit: "Phase 5: Upload system complete"
+### PHASE 5: Upload Page Implementation
+1. Create `/upload` page with file upload interface
+2. Implement drag & drop uploader for .xlsx (backtest) and .csv (forward) files
+3. Create server actions in `app/api/upload/backtest/route.ts` and `/forward/route.ts`
+4. Server action saves files to `data/backtest/` or `data/forward/` directories
+5. Add file validation (type, size, name format)
+6. Implement success/error notifications with toast
+7. Show list of recently uploaded files
+8. Test complete upload flow for both file types
+9. Commit: "Phase 5: Upload page complete"
 
-### PHASE 6: Dashboard Components
-1. Create Logo component with DEUS QUANT branding
-2. Build Header and Navigation
-3. Implement EquityCurve chart
-4. Create StatsPanel with metric cards
-5. Test all components render correctly
-6. Commit: "Phase 6: Dashboard components complete"
+### PHASE 6: Dashboard Refresh Feature
+1. Update `components/dashboard/Header.tsx` with functional "Refresh" button
+2. Add loading state with spinning icon during refresh
+3. Implement refresh handler that calls `/api/strategies/load`
+4. Dashboard updates to client component or uses router.refresh()
+5. Add toast notifications for refresh success/error
+6. Update "Last Update" timestamp on successful refresh
+7. Test complete flow: upload file → navigate to dashboard → click refresh → see new data
+8. Commit: "Phase 6: Dashboard refresh feature complete"
 
 ### PHASE 7: Strategy Table & Portfolio
 1. Create StrategyTable with sorting/filtering
@@ -57,28 +66,31 @@ You are building the DEUS QUANT Portfolio System. Follow the documentation in `d
 4. Test portfolio calculations
 5. Commit: "Phase 7: Portfolio system complete"
 
-### PHASE 8: Advanced Visualizations
+### PHASE 8: Forward Test Integration
+1. Create CSV parser for forward tests
+2. Implement BacktestForwardMerger class
+3. Update loader to merge backtest and forward data
+4. Test merging with sample data from `data/forward/`
+5. Verify date alignment and calculations
+6. Commit: "Phase 8: Forward test integration complete"
+
+### PHASE 9: Advanced Visualizations
 1. Create MonthlyHeatmap component
 2. Build CorrelationMatrix
 3. Implement DrawdownChart
 4. Add RiskReturnScatter
 5. Test all charts with real data
-6. Commit: "Phase 8: Advanced visualizations complete"
+6. Commit: "Phase 9: Advanced visualizations complete"
 
-### PHASE 9: Export Features
-1. Implement PDF generation
-2. Add Excel export
-3. Create shareable links
-4. Test all export formats
-5. Commit: "Phase 9: Export features complete"
-
-### PHASE 10: Polish & Optimization
-1. Add loading states everywhere
-2. Implement error boundaries
-3. Optimize performance (memoization, virtualization)
-4. Add animations with Framer Motion
-5. Final testing of complete system
-6. Commit: "Phase 10: System complete and optimized"
+### PHASE 10: Export Features & Polish
+1. Implement PDF report generation
+2. Add Excel export functionality
+3. Add loading states everywhere
+4. Implement error boundaries
+5. Optimize performance (memoization, virtualization)
+6. Add animations with Framer Motion
+7. Final testing of complete system
+8. Commit: "Phase 10: System complete and optimized"
 
 ## TESTING REQUIREMENTS:
 - After EACH phase, run the app and verify functionality

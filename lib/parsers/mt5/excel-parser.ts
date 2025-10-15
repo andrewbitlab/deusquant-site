@@ -147,69 +147,142 @@ export class MT5ExcelParser {
       return parseFloat(str) || 0
     }
 
-    // Parse summary data from rows (Polish format: data in column 3)
+    // Parse summary data from rows (Polish format: data in columns 3, 7, and 11)
     for (let i = 0; i < data.length; i++) {
       const row = data[i]
-      const label = String(row[0] || '').toLowerCase().trim()
+      const label0 = String(row[0] || '').toLowerCase().trim()
+      const label4 = String(row[4] || '').toLowerCase().trim()
+      const label8 = String(row[8] || '').toLowerCase().trim()
       const value3 = row[3] // Column 3 for first value
-      const value7 = row[7] // Column 7 for second value
+      const value7 = row[7] // Column 7 for left side values
+      const value11 = row[11] // Column 11 for right side values
 
-      // Instrument/Symbol
-      if (label.includes('instrument')) {
+      // Instrument/Symbol (in column 0 labels)
+      if (label0.includes('instrument')) {
         summary.symbol = String(value3).replace('_bt', '')
       }
 
       // Period
-      if (label.includes('okres') || label.includes('period')) {
+      if (label0.includes('okres') || label0.includes('period')) {
         const periodStr = String(value3)
         if (periodStr.includes('H1')) summary.period = 'H1'
       }
 
-      // Polish labels mapping
-      if (label.includes('zysk netto')) summary.totalNetProfit = parseNum(value3)
-      if (label.includes('zysk brutto') && !label.includes('strata'))
+      // Main metrics (column 0 labels, column 3 values)
+      if (label0.includes('zysk netto')) {
+        summary.totalNetProfit = parseNum(value3)
+        // Drawdown might be in the same row (columns 8+11)
+        if (label8.includes('względne obsunięcia') && label8.includes('equity') && value11) {
+          const ddStr = String(value11)
+          // Try to parse just the number (might not have % format here)
+          const ddValue = parseNum(ddStr)
+          if (ddValue > 0) {
+            summary.maximalDrawdown = ddValue
+            summary.relativeDrawdown = ddValue
+            // Try to get percentage from col7 if available
+            const ddPctStr = String(value7)
+            const pctMatch = ddPctStr.match(/([\d.]+)/)
+            if (pctMatch) {
+              summary.maximalDrawdownPercent = parseFloat(pctMatch[1])
+              summary.relativeDrawdownPercent = parseFloat(pctMatch[1])
+            }
+          }
+        }
+      }
+      if (label0.includes('zysk brutto') && !label0.includes('strata')) {
         summary.totalGrossProfit = parseNum(value3)
-      if (label.includes('strata brutto'))
+        // Drawdown might be in columns 8+11 here too
+        if (label8.includes('względne obsunięcia') && label8.includes('equity') && value11) {
+          const ddStr = String(value11)
+          const match = ddStr.match(/([\d.]+)%?\s*\(([\d.]+)\)/)
+          if (match) {
+            summary.relativeDrawdownPercent = parseFloat(match[1])
+            summary.relativeDrawdown = parseFloat(match[2])
+            summary.maximalDrawdownPercent = summary.relativeDrawdownPercent
+            summary.maximalDrawdown = summary.relativeDrawdown
+          } else {
+            // Try simple number parse
+            const ddValue = parseNum(ddStr)
+            if (ddValue > 0 && ddValue < 100) {
+              // Looks like percentage
+              summary.maximalDrawdownPercent = ddValue
+              summary.relativeDrawdownPercent = ddValue
+            } else if (ddValue >= 100) {
+              // Looks like absolute value
+              summary.maximalDrawdown = ddValue
+              summary.relativeDrawdown = ddValue
+            }
+          }
+        }
+      }
+      if (label0.includes('strata brutto'))
         summary.totalGrossLoss = Math.abs(parseNum(value3))
-      if (label.includes('wskaźnik zysku'))
+      if (label0.includes('wskaźnik zysku'))
         summary.profitFactor = parseNum(value3)
-      if (label.includes('oczekiwany payoff'))
+      if (label0.includes('oczekiwany payoff'))
         summary.expectedPayoff = parseNum(value3)
-      if (label.includes('sharpe'))
+      if (label0.includes('wszystkie transakcje'))
+        summary.totalTrades = parseNum(value3)
+
+      // Sharpe Ratio (in column 4, value in column 7)
+      if (label4.includes('sharpe'))
         summary.sharpeRatio = parseNum(value7)
 
-      // Drawdown
-      if (label.includes('względne obsunięcia') && value7) {
-        const ddStr = String(value7)
-        const match = ddStr.match(/([\d.]+)\s*\(([\d.]+)%\)/)
+      // Drawdown - use Equity drawdown from column 8+11
+      if (label8.includes('względne obsunięcia') && label8.includes('equity') && value11) {
+        const ddStr = String(value11)
+        const match = ddStr.match(/([\d.]+)%\s*\(([\d.]+)\)/)
         if (match) {
-          summary.relativeDrawdown = parseFloat(match[1])
-          summary.relativeDrawdownPercent = parseFloat(match[2])
-          // Use relative as maximal for now
-          summary.maximalDrawdown = summary.relativeDrawdown
+          summary.relativeDrawdownPercent = parseFloat(match[1])
+          summary.relativeDrawdown = parseFloat(match[2])
           summary.maximalDrawdownPercent = summary.relativeDrawdownPercent
+          summary.maximalDrawdown = summary.relativeDrawdown
         }
       }
 
-      // Trade statistics
-      if (label.includes('wszystkie transakcje'))
-        summary.totalTrades = parseNum(value3)
-      if (label.includes('profit trades'))
-        summary.profitTrades = parseNum(value7)
-      if (label.includes('loss trades'))
-        summary.lossTrades = parseNum(value7)
-      if (label.includes('największy zyskowna'))
+      // Profit/Loss trades (column 4/8, values in column 7/11)
+      if (label4.includes('profit trades')) {
+        const profitStr = String(value7)
+        const match = profitStr.match(/(\d+)\s*\(([\d.]+)%\)/)
+        if (match) {
+          summary.profitTrades = parseInt(match[1], 10)
+        } else {
+          summary.profitTrades = parseNum(value7)
+        }
+      }
+      if (label8.includes('loss trades')) {
+        const lossStr = String(value11)
+        const match = lossStr.match(/(\d+)\s*\(([\d.]+)%\)/)
+        if (match) {
+          summary.lossTrades = parseInt(match[1], 10)
+        } else {
+          summary.lossTrades = parseNum(value11)
+        }
+      }
+
+      // Largest trades (column 4/8, values in column 7/11)
+      if (label4.includes('największy zyskowna'))
         summary.largestProfitTrade = parseNum(value7)
-      if (label.includes('największy stratna'))
-        summary.largestLossTrade = Math.abs(parseNum(value7))
-      if (label.includes('średnia zyskowna'))
+      if (label8.includes('największy stratna'))
+        summary.largestLossTrade = Math.abs(parseNum(value11))
+
+      // Average trades
+      if (label4.includes('średnia zyskowna'))
         summary.averageProfitTrade = parseNum(value7)
-      if (label.includes('średnia stratna'))
-        summary.averageLossTrade = Math.abs(parseNum(value7))
-      if (label.includes('maksimum kolejne wygrane'))
-        summary.maxConsecutiveWins = parseNum(value7)
-      if (label.includes('maksimum kolejne straty'))
-        summary.maxConsecutiveLosses = parseNum(value7)
+      if (label8.includes('średnia stratna'))
+        summary.averageLossTrade = Math.abs(parseNum(value11))
+
+      // Consecutive wins/losses
+      if (label4.includes('maksimum kolejne wygrane')) {
+        const winsStr = String(value7)
+        const match = winsStr.match(/(\d+)/)
+        if (match) summary.maxConsecutiveWins = parseInt(match[1], 10)
+      }
+      if (label8.includes('maksimum kolejne straty')) {
+        const lossesStr = String(value11)
+        const match = lossesStr.match(/(\d+)/)
+        if (match) summary.maxConsecutiveLosses = parseInt(match[1], 10)
+      }
     }
 
     // Calculate win rate if we have profit trades and total trades
@@ -222,55 +295,73 @@ export class MT5ExcelParser {
   }
 
   /**
-   * Parse transaction history from Excel data
+   * Parse transaction history from Excel data (Polish MT5 "Transakcje" table)
    */
   private static parseTransactions(data: any[][]): MT5Transaction[] {
     const transactions: MT5Transaction[] = []
 
-    // Find the transactions table header
+    // Find the "Transakcje" (deals) table - not "Zlecenia" (orders)
     let headerRow = -1
     for (let i = 0; i < data.length; i++) {
       const row = data[i]
       const firstCell = String(row[0] || '').toLowerCase()
-      if (
-        firstCell.includes('time') ||
-        firstCell.includes('#') ||
-        firstCell === 'ticket'
-      ) {
-        headerRow = i
-        break
+
+      // Look for "Transakcje" section header first
+      if (firstCell.includes('transakcje') && !firstCell.includes('wszystkie')) {
+        // Next row should be the header with "Czas", "Umowa", etc.
+        if (i + 1 < data.length) {
+          const nextRow = String(data[i + 1][0] || '').toLowerCase()
+          if (nextRow.includes('czas') || nextRow.includes('time')) {
+            headerRow = i + 1
+            break
+          }
+        }
       }
     }
 
     if (headerRow === -1) return transactions
 
-    // Parse transactions
+    // Parse transactions (Polish format from "Transakcje" table)
+    // Columns: Czas(0), Umowa(1), Instrument(2), Typ(3), Kierunek(4), Wolumen(5),
+    //          Cena(6), Zlecenie(7), Prowizja(8), Swap(9), Zysk(10), Saldo(11), Komentarz(12)
     for (let i = headerRow + 1; i < data.length; i++) {
       const row = data[i]
       if (!row || row.length < 5) continue
 
+      // Stop if we hit another section or empty rows
+      if (!row[0] && !row[1]) continue
+
       try {
+        const dealTime = this.parseDate(row[0])
+        const type = this.parseTradeType(String(row[3] || ''))
+        const symbol = String(row[2] || '')
+        const volume = parseFloat(String(row[5] || '0'))
+        const price = parseFloat(String(row[6] || '0'))
+        const commission = parseFloat(String(row[8] || '0'))
+        const swap = parseFloat(String(row[9] || '0'))
+        const profit = parseFloat(String(row[10] || '0'))
+        const balance = parseFloat(String(row[11] || '0'))
+
+        // Skip if date is invalid
+        if (!dealTime || dealTime.getTime() === 0) continue
+
         const transaction: MT5Transaction = {
-          id: parseInt(String(row[0] || i), 10),
-          type: this.parseTradeType(String(row[2] || '')),
-          openTime: this.parseDate(row[1]),
-          symbol: String(row[3] || ''),
-          volume: parseFloat(String(row[4] || '0')),
-          openPrice: parseFloat(String(row[5] || '0')),
-          closePrice: parseFloat(String(row[7] || '0')) || undefined,
-          sl: parseFloat(String(row[6] || '0')) || undefined,
-          tp: parseFloat(String(row[8] || '0')) || undefined,
-          closeTime: this.parseDate(row[9]),
-          commission: parseFloat(String(row[10] || '0')),
-          swap: parseFloat(String(row[11] || '0')),
-          profit: parseFloat(String(row[12] || '0')),
-          balance: parseFloat(String(row[13] || '0')) || undefined,
-          comment: String(row[14] || '') || undefined,
+          id: parseInt(String(row[1] || i), 10),
+          type: type,
+          openTime: dealTime,
+          closeTime: dealTime, // In deals table, we only have one timestamp
+          symbol: symbol,
+          volume: volume,
+          openPrice: price,
+          closePrice: price,
+          commission: commission,
+          swap: swap,
+          profit: profit,
+          balance: balance,
+          comment: String(row[12] || '') || undefined,
         }
 
-        if (transaction.openTime && transaction.openTime.getTime() > 0) {
-          transactions.push(transaction)
-        }
+        transactions.push(transaction)
       } catch (error) {
         // Skip malformed rows
         continue
@@ -325,32 +416,33 @@ export class MT5ExcelParser {
       return { monthlyReturns, dailyEquity }
     }
 
-    // Calculate daily equity curve
-    let runningBalance = 1000 // Normalize to $1000 initial
-    dailyEquity.push({
-      date: transactions[0].openTime,
-      equity: runningBalance,
-    })
+    // Find initial balance (first transaction should be balance deposit)
+    const initialBalance = transactions[0].balance || 10000
 
+    // Calculate equity curve directly from balance
+    // Balance is already cumulative in MT5 reports
     for (const tx of transactions) {
-      runningBalance += tx.profit
-      dailyEquity.push({
-        date: tx.closeTime || tx.openTime,
-        equity: runningBalance,
-      })
+      if (tx.balance && tx.balance > 0) {
+        dailyEquity.push({
+          date: tx.closeTime || tx.openTime,
+          equity: tx.balance,
+        })
+      }
     }
 
     // Calculate monthly returns
     const monthlyProfits = new Map<string, number>()
     for (const tx of transactions) {
-      const monthKey = `${tx.openTime.getFullYear()}-${String(
-        tx.openTime.getMonth() + 1
-      ).padStart(2, '0')}`
-      monthlyProfits.set(monthKey, (monthlyProfits.get(monthKey) || 0) + tx.profit)
+      if (tx.profit !== 0) {
+        const monthKey = `${tx.openTime.getFullYear()}-${String(
+          tx.openTime.getMonth() + 1
+        ).padStart(2, '0')}`
+        monthlyProfits.set(monthKey, (monthlyProfits.get(monthKey) || 0) + tx.profit)
+      }
     }
 
     Array.from(monthlyProfits.entries()).forEach(([month, profit]) => {
-      const returnPct = (profit / 1000) * 100 // % return based on $1000 initial
+      const returnPct = (profit / initialBalance) * 100 // % return based on initial balance
       monthlyReturns.set(month, returnPct)
     })
 

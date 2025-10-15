@@ -97,21 +97,24 @@ deus-quant-portfolio/
 │   ├── (auth)/                   # Auth group (if needed)
 │   ├── api/
 │   │   ├── strategies/
+│   │   │   ├── load/route.ts     # GET - Load all strategies from data/
 │   │   │   ├── route.ts          # GET, POST strategies
 │   │   │   └── [id]/route.ts     # GET, PUT, DELETE by ID
 │   │   ├── portfolio/
 │   │   │   ├── route.ts          # Portfolio operations
 │   │   │   └── calculate/route.ts # Real-time calculations
 │   │   ├── upload/
-│   │   │   ├── mt5/route.ts      # MT5 file upload
-│   │   │   └── csv/route.ts      # CSV forward test upload
+│   │   │   ├── backtest/route.ts # POST - Save backtest file to data/backtest/
+│   │   │   └── forward/route.ts  # POST - Save forward test to data/forward/
 │   │   └── export/
 │   │       ├── pdf/route.ts      # PDF generation
 │   │       └── excel/route.ts    # Excel export
 │   ├── dashboard/
-│   │   ├── page.tsx               # Main dashboard
+│   │   ├── page.tsx               # Main dashboard (loads from data/)
 │   │   ├── loading.tsx            # Loading state
 │   │   └── error.tsx              # Error boundary
+│   ├── upload/
+│   │   └── page.tsx               # Upload page for file management
 │   ├── layout.tsx                 # Root layout
 │   └── page.tsx                   # Landing/redirect
 │
@@ -140,11 +143,13 @@ deus-quant-portfolio/
 │   ├── parsers/
 │   │   ├── mt5/
 │   │   │   ├── html-parser.ts    # MT5 HTML report parser
-│   │   │   ├── excel-parser.ts   # MT5 Excel parser
+│   │   │   ├── excel-parser.ts   # MT5 Excel parser (Polish format)
 │   │   │   └── types.ts          # TypeScript types
 │   │   └── csv/
 │   │       ├── forward-parser.ts # Forward test CSV
 │   │       └── merger.ts          # Backtest/forward merger
+│   ├── data/
+│   │   └── loader.ts              # Load strategies from data/ directory
 │   ├── calculations/
 │   │   ├── metrics.ts             # Performance metrics
 │   │   ├── portfolio.ts           # Portfolio calculations
@@ -159,6 +164,14 @@ deus-quant-portfolio/
 │       ├── formatters.ts          # Number/date formatting
 │       ├── validators.ts          # Input validation
 │       └── constants.ts           # App constants
+│
+├── data/                          # File storage (source of truth)
+│   ├── backtest/                  # MT5 backtest files (.xlsx)
+│   │   ├── 202501021.xlsx
+│   │   ├── 202501025.xlsx
+│   │   └── 202501027.xlsx
+│   └── forward/                   # Forward test CSV files
+│       └── orders-deusfund-sqx1-2_8-10-2025.csv
 │
 ├── prisma/
 │   ├── schema.prisma              # Database schema
@@ -284,7 +297,92 @@ export class MT5Parser {
 }
 ```
 
-### 2. Forward Test Integration
+### 2. Upload System Architecture
+
+The DEUS QUANT system uses a dedicated upload page for file management, with the dashboard displaying data loaded from the filesystem.
+
+#### Upload Page (`/upload`)
+- **Purpose**: Dedicated page for adding new backtest reports and updating forward test files
+- **Location**: Accessible at `/upload` route
+- **File Types**: MT5 Excel files (.xlsx) for backtests, CSV files for forward tests
+- **Storage**: Files are saved directly to the filesystem in `data/` directory:
+  - Backtest files → `data/backtest/`
+  - Forward test files → `data/forward/`
+
+```typescript
+// app/upload/page.tsx - Upload Page Implementation
+export default function UploadPage() {
+  // 1. File upload interface with drag & drop
+  // 2. File type validation (xlsx for backtest, csv for forward)
+  // 3. Server action to save files to appropriate directory
+  // 4. Success/error notifications
+  // 5. List of recently uploaded files
+}
+
+// Server action for file upload
+'use server'
+async function uploadFile(formData: FormData, type: 'backtest' | 'forward') {
+  // 1. Extract file from formData
+  // 2. Validate file type and size
+  // 3. Save to data/backtest/ or data/forward/
+  // 4. Return success/error response
+}
+```
+
+#### Dashboard Refresh Mechanism
+- **Purpose**: Manually reload data from filesystem when new files are added
+- **Location**: "Refresh" button in dashboard header (top-right)
+- **Behavior**:
+  - Scans `data/backtest/` and `data/forward/` directories
+  - Parses any new or updated files
+  - Updates dashboard display with latest data
+  - Shows loading state during refresh
+  - Displays notification on completion
+
+```typescript
+// components/dashboard/Header.tsx - Refresh Button
+export function DashboardHeader() {
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      // Call data loader to rescan directory
+      const response = await fetch('/api/strategies/load')
+      // Update UI with new data
+      toast.success('Data refreshed successfully')
+    } catch (error) {
+      toast.error('Failed to refresh data')
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  return (
+    <header>
+      <Logo />
+      <Button onClick={handleRefresh} disabled={isRefreshing}>
+        <RefreshCw className={isRefreshing ? 'animate-spin' : ''} />
+        Refresh
+      </Button>
+    </header>
+  )
+}
+```
+
+#### Data Loading Flow
+1. **Initial Load**: Dashboard loads all strategies from `data/` on page render
+2. **Upload New File**: User navigates to `/upload`, uploads file → saved to `data/`
+3. **Refresh**: User returns to dashboard, clicks "Refresh" button
+4. **Reload**: System rescans `data/` directory and updates display
+
+This architecture separates concerns:
+- `/upload` page handles file management
+- Dashboard focuses on data visualization
+- No database complexity - files are the source of truth
+- Simple, reliable, easy to maintain
+
+### 3. Forward Test Integration
 
 ```typescript
 // lib/parsers/csv/merger.ts
@@ -745,21 +843,35 @@ npx prisma init --datasource-provider sqlite
 - [ ] Data validation and error handling
 - [ ] Upload UI with progress indicators
 
-### Phase 4: Dashboard Implementation (Days 7-10)
-- [ ] Main dashboard layout
+### Phase 4: Dashboard Implementation (Days 7-9)
+- [ ] Main dashboard layout with data loader
 - [ ] Equity curve chart with Recharts
 - [ ] Statistics panel with metric cards
 - [ ] Strategy table with sorting/filtering
-- [ ] Real-time portfolio calculations
+- [ ] Portfolio calculations from filesystem data
 
-### Phase 5: Advanced Features (Days 11-13)
-- [ ] Portfolio weight optimization
+### Phase 5: Upload Page Implementation (Days 10-11)
+- [ ] Create `/upload` page with file upload interface
+- [ ] Implement drag & drop for backtest (.xlsx) and forward (.csv) files
+- [ ] Server actions to save files to `data/backtest/` and `data/forward/`
+- [ ] File validation and error handling
+- [ ] Success notifications and upload history
+
+### Phase 6: Dashboard Refresh Feature (Day 12)
+- [ ] Add "Refresh" button to dashboard header
+- [ ] Implement data reload mechanism (rescan `data/` directory)
+- [ ] Loading state with spinning icon
+- [ ] Toast notifications on success/error
+- [ ] Update last refresh timestamp
+
+### Phase 7: Advanced Visualizations (Days 13-14)
+- [ ] Portfolio weight optimization (INVERSE_DD, SHARPE, EQUAL)
 - [ ] Correlation matrix visualization
 - [ ] Monthly returns heatmap
 - [ ] Risk/return scatter plot
 - [ ] Performance comparison tools
 
-### Phase 6: Export & Polish (Days 14-15)
+### Phase 8: Export & Polish (Days 14-15)
 - [ ] PDF report generation
 - [ ] Excel export functionality
 - [ ] Performance optimization
