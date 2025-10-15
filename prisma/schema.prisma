@@ -1,4 +1,4 @@
-// Placeholder - will be populated in Phase 2
+// DEUS QUANT Portfolio System Database Schema
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,4 +6,144 @@ generator client {
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+model Strategy {
+  id              String   @id @default(cuid())
+  magicNumber     Int      @unique
+  name            String
+  symbol          String
+  timeframe       String
+  version         String?  @default("1.0.0")
+
+  // Performance data
+  backtestStart   DateTime
+  backtestEnd     DateTime
+  forwardStart    DateTime?
+  forwardEnd      DateTime?
+
+  // Cached metrics (JSON)
+  backtestMetrics String  // JSON serialized
+  forwardMetrics  String?  // JSON serialized
+  combinedMetrics String?  // JSON serialized
+
+  // Equity curves (JSON arrays)
+  backtestEquity  String  // JSON serialized
+  forwardEquity   String?  // JSON serialized
+  combinedEquity  String?  // JSON serialized
+
+  // Monthly returns map (JSON)
+  monthlyReturns  String?  // JSON serialized
+
+  // Status (BACKTEST, FORWARD_TEST, PAPER_TRADING, LIVE, ARCHIVED)
+  status          String  @default("BACKTEST")
+  isActive        Boolean @default(true)
+
+  // Relations
+  transactions    Transaction[]
+  portfolios      PortfolioStrategy[]
+
+  // Audit fields
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?
+
+  @@index([symbol, timeframe])
+  @@index([status, isActive])
+}
+
+model Transaction {
+  id            String    @id @default(cuid())
+  strategyId    String
+  strategy      Strategy  @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  // Trade data
+  orderId       Int       @unique
+  type          String    // BUY, SELL, BUY_LIMIT, SELL_LIMIT, BUY_STOP, SELL_STOP, BALANCE, CREDIT
+  symbol        String
+  volume        Float
+
+  // Prices
+  openPrice     Float
+  closePrice    Float?
+  sl            Float?
+  tp            Float?
+
+  // Times
+  openTime      DateTime
+  closeTime     DateTime?
+
+  // Financial
+  commission    Float
+  swap          Float
+  profit        Float
+  balance       Float?
+
+  // Meta
+  comment       String?
+  isForwardTest Boolean   @default(false)
+
+  createdAt     DateTime  @default(now())
+
+  @@index([strategyId, openTime])
+  @@index([symbol])
+}
+
+model Portfolio {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+
+  // Configuration
+  rebalanceFreq String?  @default("MONTHLY") // DAILY, WEEKLY, MONTHLY, QUARTERLY
+  weightMethod  String   @default("INVERSE_DD") // EQUAL, INVERSE_DD, SHARPE, CUSTOM
+
+  // Cached calculations (JSON)
+  equityCurve   String?  // JSON serialized
+  statistics    String?  // JSON serialized
+  lastCalculated DateTime?
+
+  // Relations
+  strategies    PortfolioStrategy[]
+
+  // Audit
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     String?
+  isPublic      Boolean  @default(false)
+
+  @@index([isPublic])
+}
+
+model PortfolioStrategy {
+  id            String    @id @default(cuid())
+  portfolioId   String
+  portfolio     Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  strategyId    String
+  strategy      Strategy  @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  weight        Float     // 0.0000 to 1.0000
+  customWeight  Float?    // For CUSTOM weight method
+  enabled       Boolean   @default(true)
+
+  addedAt       DateTime  @default(now())
+
+  @@unique([portfolioId, strategyId])
+  @@index([enabled])
+}
+
+// For audit log
+model AuditLog {
+  id            String   @id @default(cuid())
+  action        String   // CREATE, UPDATE, DELETE, IMPORT, EXPORT
+  entityType    String   // Strategy, Portfolio, Transaction
+  entityId      String
+  changes       String?  // JSON diff of changes
+  userId        String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
