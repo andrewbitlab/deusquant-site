@@ -60,47 +60,38 @@ export class MT5ExcelParser {
   }
 
   /**
-   * Parse metadata from Excel data
+   * Parse metadata from Excel data (Polish MT5 format)
    */
   private static parseMetadata(data: any[][]): MT5Metadata {
     // Look for metadata in the first rows
+    // Polish MT5 format has data in column 3 (index 3)
     let magicNumber = 0
     let currency = 'USD'
     let accountNumber: string | undefined
     let broker: string | undefined
     let leverage: number | undefined
 
-    for (let i = 0; i < Math.min(20, data.length); i++) {
+    for (let i = 0; i < Math.min(30, data.length); i++) {
       const row = data[i]
       const label = String(row[0] || '').toLowerCase()
+      const value3 = String(row[3] || '')
 
-      if (label.includes('expert') || label.includes('magic')) {
-        const value = String(row[1] || '')
-        const match = value.match(/\d+/)
+      // MagicNumber is in column 3
+      if (label.includes('parametry') || value3.toLowerCase().includes('magicnumber')) {
+        const match = value3.match(/MagicNumber[=\s]*(\d+)/i)
         if (match) {
-          magicNumber = parseInt(match[0], 10)
+          magicNumber = parseInt(match[1], 10)
         }
+      }
+
+      // Broker name
+      if (row[1] && String(row[1]).includes('Market')) {
+        broker = String(row[1])
       }
 
       if (label.includes('currency') || label.includes('deposit')) {
         const value = String(row[1] || '')
         if (value.length === 3) currency = value
-      }
-
-      if (label.includes('account')) {
-        accountNumber = String(row[1] || '')
-      }
-
-      if (label.includes('broker') || label.includes('company')) {
-        broker = String(row[1] || '')
-      }
-
-      if (label.includes('leverage')) {
-        const value = String(row[1] || '')
-        const match = value.match(/\d+/)
-        if (match) {
-          leverage = parseInt(match[0], 10)
-        }
       }
     }
 
@@ -114,7 +105,7 @@ export class MT5ExcelParser {
   }
 
   /**
-   * Parse summary statistics from Excel data
+   * Parse summary statistics from Excel data (Polish MT5 format)
    */
   private static parseSummary(data: any[][]): MT5Summary {
     const summary: Partial<MT5Summary> = {
@@ -149,71 +140,82 @@ export class MT5ExcelParser {
       averageConsecutiveLosses: 0,
     }
 
-    // Parse summary data from rows
+    // Helper to parse numeric values
+    const parseNum = (val: any): number => {
+      if (typeof val === 'number') return val
+      const str = String(val).replace(/[^\d.-]/g, '')
+      return parseFloat(str) || 0
+    }
+
+    // Parse summary data from rows (Polish format: data in column 3)
     for (let i = 0; i < data.length; i++) {
       const row = data[i]
       const label = String(row[0] || '').toLowerCase().trim()
-      const value = row[1]
+      const value3 = row[3] // Column 3 for first value
+      const value7 = row[7] // Column 7 for second value
 
-      // Helper to parse numeric values
-      const parseNum = (val: any): number => {
-        if (typeof val === 'number') return val
-        const str = String(val).replace(/[^\d.-]/g, '')
-        return parseFloat(str) || 0
+      // Instrument/Symbol
+      if (label.includes('instrument')) {
+        summary.symbol = String(value3).replace('_bt', '')
       }
 
-      // Map labels to properties
-      if (label.includes('symbol')) summary.symbol = String(value)
-      if (label.includes('period')) summary.period = String(value)
-      if (label.includes('total net profit')) summary.totalNetProfit = parseNum(value)
-      if (label.includes('gross profit') && !label.includes('loss'))
-        summary.totalGrossProfit = parseNum(value)
-      if (label.includes('gross loss')) summary.totalGrossLoss = Math.abs(parseNum(value))
-      if (label.includes('profit factor')) summary.profitFactor = parseNum(value)
-      if (label.includes('expected payoff')) summary.expectedPayoff = parseNum(value)
-      if (label.includes('absolute drawdown')) summary.absoluteDrawdown = parseNum(value)
-      if (label.includes('maximal drawdown') && label.includes('%'))
-        summary.maximalDrawdownPercent = parseNum(value)
-      if (label.includes('maximal drawdown') && !label.includes('%'))
-        summary.maximalDrawdown = parseNum(value)
-      if (label.includes('relative drawdown') && label.includes('%'))
-        summary.relativeDrawdownPercent = parseNum(value)
-      if (label.includes('relative drawdown') && !label.includes('%'))
-        summary.relativeDrawdown = parseNum(value)
-      if (label.includes('total trades') || label.includes('total deals'))
-        summary.totalTrades = parseNum(value)
-      if (label.includes('short') && label.includes('won'))
-        summary.shortPositions = parseNum(value)
-      if (label.includes('long') && label.includes('won')) summary.longPositions = parseNum(value)
-      if (label.includes('profit trades')) summary.profitTrades = parseNum(value)
-      if (label.includes('loss trades')) summary.lossTrades = parseNum(value)
-      if (label.includes('largest') && label.includes('profit'))
-        summary.largestProfitTrade = parseNum(value)
-      if (label.includes('largest') && label.includes('loss'))
-        summary.largestLossTrade = parseNum(value)
-      if (label.includes('average') && label.includes('profit') && !label.includes('loss'))
-        summary.averageProfitTrade = parseNum(value)
-      if (label.includes('average') && label.includes('loss'))
-        summary.averageLossTrade = parseNum(value)
-      if (label.includes('maximum consecutive wins'))
-        summary.maxConsecutiveWins = parseNum(value)
-      if (label.includes('maximum consecutive losses'))
-        summary.maxConsecutiveLosses = parseNum(value)
-      if (label.includes('maximal consecutive profit'))
-        summary.maxConsecutiveProfit = parseNum(value)
-      if (label.includes('maximal consecutive loss'))
-        summary.maxConsecutiveLoss = parseNum(value)
+      // Period
+      if (label.includes('okres') || label.includes('period')) {
+        const periodStr = String(value3)
+        if (periodStr.includes('H1')) summary.period = 'H1'
+      }
+
+      // Polish labels mapping
+      if (label.includes('zysk netto')) summary.totalNetProfit = parseNum(value3)
+      if (label.includes('zysk brutto') && !label.includes('strata'))
+        summary.totalGrossProfit = parseNum(value3)
+      if (label.includes('strata brutto'))
+        summary.totalGrossLoss = Math.abs(parseNum(value3))
+      if (label.includes('wskaźnik zysku'))
+        summary.profitFactor = parseNum(value3)
+      if (label.includes('oczekiwany payoff'))
+        summary.expectedPayoff = parseNum(value3)
+      if (label.includes('sharpe'))
+        summary.sharpeRatio = parseNum(value7)
+
+      // Drawdown
+      if (label.includes('względne obsunięcia') && value7) {
+        const ddStr = String(value7)
+        const match = ddStr.match(/([\d.]+)\s*\(([\d.]+)%\)/)
+        if (match) {
+          summary.relativeDrawdown = parseFloat(match[1])
+          summary.relativeDrawdownPercent = parseFloat(match[2])
+          // Use relative as maximal for now
+          summary.maximalDrawdown = summary.relativeDrawdown
+          summary.maximalDrawdownPercent = summary.relativeDrawdownPercent
+        }
+      }
+
+      // Trade statistics
+      if (label.includes('wszystkie transakcje'))
+        summary.totalTrades = parseNum(value3)
+      if (label.includes('profit trades'))
+        summary.profitTrades = parseNum(value7)
+      if (label.includes('loss trades'))
+        summary.lossTrades = parseNum(value7)
+      if (label.includes('największy zyskowna'))
+        summary.largestProfitTrade = parseNum(value7)
+      if (label.includes('największy stratna'))
+        summary.largestLossTrade = Math.abs(parseNum(value7))
+      if (label.includes('średnia zyskowna'))
+        summary.averageProfitTrade = parseNum(value7)
+      if (label.includes('średnia stratna'))
+        summary.averageLossTrade = Math.abs(parseNum(value7))
+      if (label.includes('maksimum kolejne wygrane'))
+        summary.maxConsecutiveWins = parseNum(value7)
+      if (label.includes('maksimum kolejne straty'))
+        summary.maxConsecutiveLosses = parseNum(value7)
     }
 
     // Calculate win rate if we have profit trades and total trades
     if (summary.totalTrades && summary.totalTrades > 0) {
       summary.winRate =
         ((summary.profitTrades || 0) / summary.totalTrades) * 100
-    }
-
-    // Calculate Sharpe ratio if we have enough data
-    if (summary.totalNetProfit && summary.maximalDrawdown) {
-      summary.sharpeRatio = summary.totalNetProfit / Math.abs(summary.maximalDrawdown)
     }
 
     return summary as MT5Summary
