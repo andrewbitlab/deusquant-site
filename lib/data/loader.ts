@@ -107,43 +107,61 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
     }
 
     const magicNumber = backtest.metadata.magicNumber
+    const initialBalance = backtestTransactions[0]?.balance || 10000
 
-    // Check if we have forward test data for this strategy
-    const forwardTransactions = forwardTestsByMagic.get(magicNumber) || []
-    const hasForwardTest = forwardTransactions.length > 0
+    // STEP 1: Calculate backtest-only statistics to get the scale factor
+    const backtestStats = calculateStatistics(backtestTransactions, initialBalance)
+    const targetDrawdown = 1000
+    const backtestScaleFactor = backtestStats.maxDrawdown > 0 ? targetDrawdown / backtestStats.maxDrawdown : 1
 
-    // Merge backtest + forward test transactions
-    let allTransactions = [...backtestTransactions]
+    console.log(
+      `Strategy ${magicNumber}: Backtest max DD = $${backtestStats.maxDrawdown.toFixed(2)}, scale factor = ${backtestScaleFactor.toFixed(4)}`
+    )
+
+    // STEP 2: Scale forward test transactions using the SAME scale factor
+    const rawForwardTransactions = forwardTestsByMagic.get(magicNumber) || []
+    const hasForwardTest = rawForwardTransactions.length > 0
     let forwardTestStartDate: string | undefined
+    let scaledForwardTransactions: any[] = []
 
     if (hasForwardTest) {
-      // Get forward test start date (first forward transaction date)
-      forwardTestStartDate = forwardTransactions[0].openTime.toISOString().split('T')[0]
+      forwardTestStartDate = rawForwardTransactions[0].openTime.toISOString().split('T')[0]
 
-      // Append forward test transactions
-      allTransactions = [...backtestTransactions, ...forwardTransactions]
-
-      // Sort all transactions by date
-      allTransactions.sort((a, b) => a.openTime.getTime() - b.openTime.getTime())
+      // Scale each forward test transaction's profit using backtest scale factor
+      scaledForwardTransactions = rawForwardTransactions.map((tx) => ({
+        ...tx,
+        profit: tx.profit * backtestScaleFactor,
+        commission: tx.commission * backtestScaleFactor,
+        swap: tx.swap * backtestScaleFactor,
+      }))
 
       console.log(
-        `Strategy ${magicNumber}: Merged ${backtestTransactions.length} backtest + ${forwardTransactions.length} forward test transactions`
+        `Strategy ${magicNumber}: Scaled ${scaledForwardTransactions.length} forward test transactions using backtest scale factor`
       )
     }
 
-    // Determine initial balance from first transaction or use default
-    const initialBalance = allTransactions[0]?.balance || 10000
+    // STEP 3: Merge backtest (normalized) + forward test (scaled to match)
+    const backtestNormalized = backtestTransactions.map((tx) => ({
+      ...tx,
+      profit: tx.profit * backtestScaleFactor,
+      commission: tx.commission * backtestScaleFactor,
+      swap: tx.swap * backtestScaleFactor,
+    }))
 
-    // Calculate ALL statistics from merged transactions (not from Excel)
+    const allTransactions = [...backtestNormalized, ...scaledForwardTransactions].sort(
+      (a, b) => a.openTime.getTime() - b.openTime.getTime()
+    )
+
+    // STEP 4: Calculate combined statistics (now position sizes are coherent)
     const stats = calculateStatistics(allTransactions, initialBalance)
 
     // Build profit curve (cumulative profit starting from $0)
     const rawProfitCurve = buildProfitCurve(allTransactions)
     const profitCurveWithDrawdowns = calculateDrawdowns(rawProfitCurve)
 
-    // Normalize profit curve so max drawdown = $1000
-    const targetDrawdown = 1000
-    const scaleFactor = stats.maxDrawdown > 0 ? targetDrawdown / stats.maxDrawdown : 1
+    // Since transactions are already scaled, max DD should be close to $1000
+    // But we normalize again to ensure exactly $1000
+    const actualScaleFactor = stats.maxDrawdown > 0 ? targetDrawdown / stats.maxDrawdown : 1
 
     const normalizedProfitCurve = normalizeProfitCurve(
       profitCurveWithDrawdowns,
@@ -151,8 +169,8 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
       targetDrawdown
     )
 
-    // Normalize statistics to match the curve
-    const normalizedStats = normalizeStatistics(stats, scaleFactor)
+    // Normalize statistics
+    const normalizedStats = normalizeStatistics(stats, actualScaleFactor)
 
     // Get symbol and timeframe from Excel metadata (these are metadata, not calculations)
     const symbol = backtest.summary.symbol || 'XAUUSD'
