@@ -2,8 +2,23 @@
 
 import { Logo } from '../brand/Logo'
 import { RefreshCw } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 export function DashboardHeader() {
+  const [currentTime, setCurrentTime] = useState<string>('')
+
+  useEffect(() => {
+    // Only render time on client to avoid hydration mismatch
+    setCurrentTime(new Date().toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }))
+  }, [])
+
   return (
     <header className="border-b border-border-light bg-white">
       <div className="container mx-auto flex h-16 items-center justify-between px-6">
@@ -13,7 +28,7 @@ export function DashboardHeader() {
           <div className="text-sm">
             <span className="text-text-muted">Last Update:</span>
             <span className="ml-2 font-mono text-text-primary">
-              {new Date().toLocaleString()}
+              {currentTime || '—'}
             </span>
           </div>
           <button
