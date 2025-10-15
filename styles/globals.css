@@ -1,0 +1,224 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Primary Colors */
+    --deus-white: #ffffff;
+    --deus-gray: #54585f;
+
+    /* Backgrounds */
+    --bg-primary: #ffffff;
+    --bg-secondary: #fafafa;
+    --bg-tertiary: #f5f5f5;
+
+    /* Text */
+    --text-primary: #54585f;
+    --text-secondary: #7a7d84;
+    --text-muted: #a0a3a9;
+
+    /* Accent Colors for Data */
+    --accent-profit: #16a34a;
+    --accent-loss: #dc2626;
+    --accent-info: #3b82f6;
+    --accent-warning: #f59e0b;
+
+    /* Borders & Dividers */
+    --border-light: #e5e7eb;
+    --border-default: #d1d5db;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(84 88 95 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(84 88 95 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(84 88 95 / 0.1);
+  }
+
+  * {
+    @apply border-border-default;
+  }
+
+  body {
+    @apply bg-bg-primary text-text-primary;
+  }
+}
+
+@layer components {
+  /* DEUS QUANT Custom Components */
+
+  .card {
+    @apply bg-white rounded-lg border border-border-light shadow-deus-sm p-6;
+  }
+
+  .card-hover {
+    @apply card transition-shadow hover:shadow-deus-md;
+  }
+
+  .stat-card {
+    @apply card;
+  }
+
+  .stat-label {
+    @apply text-sm text-text-muted uppercase tracking-wide font-display;
+  }
+
+  .stat-value {
+    @apply text-2xl font-bold font-mono text-text-primary mt-2;
+  }
+
+  .stat-change-positive {
+    @apply text-sm font-mono text-accent-profit;
+  }
+
+  .stat-change-negative {
+    @apply text-sm font-mono text-accent-loss;
+  }
+
+  .btn-primary {
+    @apply px-6 py-2 bg-deus-gray text-white rounded-md font-display font-medium
+           hover:opacity-90 transition-opacity focus:outline-none focus:ring-2
+           focus:ring-deus-gray focus:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-2 bg-white text-deus-gray border border-deus-gray rounded-md
+           font-display font-medium hover:bg-bg-secondary transition-colors
+           focus:outline-none focus:ring-2 focus:ring-deus-gray focus:ring-offset-2;
+  }
+
+  .input-deus {
+    @apply w-full px-4 py-2 border border-border-default rounded-md
+           focus:outline-none focus:ring-2 focus:ring-deus-gray focus:border-transparent
+           text-text-primary placeholder-text-muted;
+  }
+
+  .table-deus {
+    @apply w-full border-collapse;
+  }
+
+  .table-deus thead {
+    @apply border-b border-border-default;
+  }
+
+  .table-deus th {
+    @apply px-4 py-3 text-left text-sm font-display font-semibold text-text-secondary
+           uppercase tracking-wide;
+  }
+
+  .table-deus td {
+    @apply px-4 py-3 text-sm text-text-primary font-body;
+  }
+
+  .table-deus tbody tr {
+    @apply border-b border-border-light hover:bg-bg-secondary transition-colors;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-profit {
+    @apply badge bg-green-100 text-accent-profit;
+  }
+
+  .badge-loss {
+    @apply badge bg-red-100 text-accent-loss;
+  }
+
+  .badge-info {
+    @apply badge bg-blue-100 text-accent-info;
+  }
+
+  .badge-warning {
+    @apply badge bg-amber-100 text-accent-warning;
+  }
+
+  /* Chart Tooltips */
+  .chart-tooltip {
+    @apply bg-white border border-border-default rounded-md shadow-deus-md p-3;
+  }
+
+  .chart-tooltip-label {
+    @apply text-xs text-text-muted mb-1;
+  }
+
+  .chart-tooltip-value {
+    @apply text-sm font-mono font-bold text-text-primary;
+  }
+}
+
+@layer utilities {
+  .text-gradient-deus {
+    @apply bg-gradient-to-r from-deus-gray to-text-secondary bg-clip-text text-transparent;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-default) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border-default);
+    border-radius: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: var(--deus-gray);
+  }
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .card {
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes radialPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.animate-radial-pulse {
+  animation: radialPulse 2s ease-in-out infinite;
+}
