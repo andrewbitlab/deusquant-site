@@ -31,19 +31,19 @@ export class ForwardCSVParser {
         skipEmptyLines: true,
         complete: (results) => {
           try {
-            const trades = results.data
+            const trades: ForwardTestTrade[] = results.data
               .map((row: any) => ({
                 date: new Date(row.Date || row.date || row.Time || row.time),
-                type: String(row.Type || row.type).toUpperCase().includes('BUY')
+                type: (String(row.Type || row.type).toUpperCase().includes('BUY')
                   ? 'BUY'
-                  : 'SELL',
+                  : 'SELL') as 'BUY' | 'SELL',
                 symbol: String(row.Symbol || row.symbol || ''),
                 volume: parseFloat(row.Volume || row.volume || 0),
                 price: parseFloat(row.Price || row.price || 0),
                 profit: parseFloat(row.Profit || row.profit || 0),
                 balance: parseFloat(row.Balance || row.balance || 0),
               }))
-              .filter((t) => t.date && !isNaN(t.date.getTime()))
+              .filter((t): t is ForwardTestTrade => t.date && !isNaN(t.date.getTime()))
 
             const totalProfit = trades.reduce((sum, t) => sum + t.profit, 0)
 

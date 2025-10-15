@@ -347,10 +347,10 @@ export class MT5ExcelParser {
       monthlyProfits.set(monthKey, (monthlyProfits.get(monthKey) || 0) + tx.profit)
     }
 
-    for (const [month, profit] of monthlyProfits.entries()) {
+    Array.from(monthlyProfits.entries()).forEach(([month, profit]) => {
       const returnPct = (profit / 1000) * 100 // % return based on $1000 initial
       monthlyReturns.set(month, returnPct)
-    }
+    })
 
     return { monthlyReturns, dailyEquity }
   }
