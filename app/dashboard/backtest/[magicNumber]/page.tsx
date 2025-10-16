@@ -13,9 +13,9 @@ export default function BacktestReportPage({ params }: BacktestReportPageProps) 
   const { magicNumber } = params
 
   try {
-    // Read HTML report file from data directory
+    // Read HTML report file from data directory (UTF-16 LE encoding from MT5)
     const filePath = join(process.cwd(), 'data', 'backtest', 'html', `${magicNumber}.html`)
-    const htmlContent = readFileSync(filePath, 'utf-8')
+    const htmlContent = readFileSync(filePath, 'utf16le')
 
     return (
       <div className="min-h-screen bg-bg-secondary">
