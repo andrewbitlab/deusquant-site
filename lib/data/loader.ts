@@ -109,16 +109,22 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
     const magicNumber = backtest.metadata.magicNumber
     const initialBalance = backtestTransactions[0]?.balance || 10000
 
-    // STEP 1: Calculate backtest-only statistics to get the scale factor
+    // STEP 1: Analyze backtest volumes
+    const backtestVolumes = backtestTransactions
+      .filter(tx => tx.type === 'BUY' || tx.type === 'SELL')
+      .map(tx => tx.volume)
+    const avgBacktestVolume = backtestVolumes.reduce((sum, v) => sum + v, 0) / backtestVolumes.length
+
+    // Calculate backtest-only statistics to get the scale factor
     const backtestStats = calculateStatistics(backtestTransactions, initialBalance)
     const targetDrawdown = 1000
     const backtestScaleFactor = backtestStats.maxDrawdown > 0 ? targetDrawdown / backtestStats.maxDrawdown : 1
 
     console.log(
-      `Strategy ${magicNumber}: Backtest max DD = $${backtestStats.maxDrawdown.toFixed(2)}, scale factor = ${backtestScaleFactor.toFixed(4)}`
+      `Strategy ${magicNumber}: Backtest avg volume = ${avgBacktestVolume.toFixed(4)} lots, max DD = $${backtestStats.maxDrawdown.toFixed(2)}, scale factor = ${backtestScaleFactor.toFixed(4)}`
     )
 
-    // STEP 2: Scale forward test transactions using the SAME scale factor
+    // STEP 2: Scale forward test transactions - BOTH volume AND profit
     const rawForwardTransactions = forwardTestsByMagic.get(magicNumber) || []
     const hasForwardTest = rawForwardTransactions.length > 0
     let forwardTestStartDate: string | undefined
@@ -127,17 +133,37 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
     if (hasForwardTest) {
       forwardTestStartDate = rawForwardTransactions[0].openTime.toISOString().split('T')[0]
 
-      // Scale each forward test transaction's profit using backtest scale factor
+      // Analyze forward test volumes
+      const forwardVolumes = rawForwardTransactions.map(tx => tx.volume)
+      const avgForwardVolume = forwardVolumes.reduce((sum, v) => sum + v, 0) / forwardVolumes.length
+
+      // Calculate volume scale factor to match backtest position sizes
+      const volumeScaleFactor = avgBacktestVolume / avgForwardVolume
+
+      console.log(
+        `Strategy ${magicNumber}: Forward avg volume = ${avgForwardVolume.toFixed(4)} lots → scaling by ${volumeScaleFactor.toFixed(4)} to match backtest`
+      )
+
+      // Scale BOTH volume and profit to match backtest position sizes
       scaledForwardTransactions = rawForwardTransactions.map((tx) => ({
         ...tx,
-        profit: tx.profit * backtestScaleFactor,
-        commission: tx.commission * backtestScaleFactor,
-        swap: tx.swap * backtestScaleFactor,
+        volume: tx.volume * volumeScaleFactor, // Scale volume to match backtest
+        profit: tx.profit * volumeScaleFactor, // Profit scales with volume
+        commission: tx.commission * volumeScaleFactor,
+        swap: tx.swap * volumeScaleFactor,
       }))
 
       console.log(
-        `Strategy ${magicNumber}: Scaled ${scaledForwardTransactions.length} forward test transactions using backtest scale factor`
+        `Strategy ${magicNumber}: Scaled ${scaledForwardTransactions.length} forward test transactions (volume + profit)`
       )
+
+      // Verify position sizes by sampling first 3 transactions
+      console.log(`Strategy ${magicNumber}: Position size verification:`)
+      const sampleBacktest = backtestTransactions.slice(0, 3).filter(tx => tx.type === 'BUY' || tx.type === 'SELL')
+      const sampleForward = scaledForwardTransactions.slice(0, 3)
+
+      console.log(`  Backtest samples: ${sampleBacktest.map(tx => `${tx.volume.toFixed(4)} lots`).join(', ')}`)
+      console.log(`  Forward (scaled): ${sampleForward.map(tx => `${tx.volume.toFixed(4)} lots`).join(', ')}`)
     }
 
     // STEP 3: Merge backtest (normalized) + forward test (scaled to match)
