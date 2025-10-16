@@ -78,9 +78,9 @@ export default function HomePage() {
           <Image
             src="/images/logo.png"
             alt="Deus Quant"
-            width={800}
-            height={600}
-            className="max-w-[90vw] max-h-[90vh] h-auto hover:opacity-90 transition-opacity cursor-pointer"
+            width={366}
+            height={385}
+            className="w-auto h-auto hover:opacity-90 transition-opacity cursor-pointer"
             priority
           />
         </Link>
