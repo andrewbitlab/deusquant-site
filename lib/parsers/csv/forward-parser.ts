@@ -122,9 +122,9 @@ export class ForwardCSVParser {
     }
 
     // Sort each strategy's transactions by date
-    for (const [magicNumber, transactions] of tradesByStrategy.entries()) {
+    Array.from(tradesByStrategy.entries()).forEach(([magicNumber, transactions]) => {
       transactions.sort((a, b) => a.openTime.getTime() - b.openTime.getTime())
-    }
+    })
 
     return {
       tradesByStrategy,

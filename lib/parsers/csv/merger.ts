@@ -41,7 +41,7 @@ export class BacktestForwardMerger {
     let forwardEquity: Array<{ date: Date; equity: number; isForward: boolean }> = []
     let transitionDate: Date | undefined
 
-    if (forward && forward.trades.length > 0) {
+    if (forward && forward.tradesByStrategy.size > 0) {
       transitionDate = forward.startDate
 
       // Start forward equity from last backtest equity value
@@ -49,10 +49,17 @@ export class BacktestForwardMerger {
         backtestEquity[backtestEquity.length - 1]?.equity || 1000
       let runningEquity = lastBacktestEquity
 
-      forwardEquity = forward.trades.map((trade) => {
+      // Get all forward trades from all strategies
+      const allForwardTrades: any[] = []
+      Array.from(forward.tradesByStrategy.values()).forEach((trades) => {
+        allForwardTrades.push(...trades)
+      })
+      allForwardTrades.sort((a, b) => a.openTime.getTime() - b.openTime.getTime())
+
+      forwardEquity = allForwardTrades.map((trade) => {
         runningEquity += trade.profit
         return {
-          date: trade.date,
+          date: trade.openTime,
           equity: runningEquity,
           isForward: true,
         }
@@ -60,8 +67,19 @@ export class BacktestForwardMerger {
     }
 
     const combinedEquity = [...backtestEquity, ...forwardEquity]
-    const totalProfit = backtest.summary.totalNetProfit + (forward?.totalProfit || 0)
-    const totalTrades = backtest.summary.totalTrades + (forward?.totalTrades || 0)
+
+    // Calculate forward test metrics
+    let forwardTotalProfit = 0
+    let forwardTotalTrades = 0
+    if (forward) {
+      Array.from(forward.tradesByStrategy.values()).forEach((trades) => {
+        forwardTotalTrades += trades.length
+        forwardTotalProfit += trades.reduce((sum, t) => sum + t.profit, 0)
+      })
+    }
+
+    const totalProfit = backtest.summary.totalNetProfit + forwardTotalProfit
+    const totalTrades = backtest.summary.totalTrades + forwardTotalTrades
 
     return {
       magicNumber: backtest.metadata.magicNumber,

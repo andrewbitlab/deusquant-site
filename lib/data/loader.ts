@@ -58,9 +58,9 @@ export async function loadForwardTests(): Promise<ForwardTestData | null> {
     const result = ForwardCSVParser.parseCSVContent(csvContent)
 
     console.log(`Loaded forward tests: ${result.tradesByStrategy.size} strategies`)
-    for (const [magic, transactions] of result.tradesByStrategy.entries()) {
+    Array.from(result.tradesByStrategy.entries()).forEach(([magic, transactions]) => {
       console.log(`  Strategy ${magic}: ${transactions.length} forward test transactions`)
-    }
+    })
 
     return result
   } catch (error) {
@@ -134,8 +134,8 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
       forwardTestStartDate = rawForwardTransactions[0].openTime.toISOString().split('T')[0]
 
       // Analyze forward test volumes
-      const forwardVolumes = rawForwardTransactions.map(tx => tx.volume)
-      const avgForwardVolume = forwardVolumes.reduce((sum, v) => sum + v, 0) / forwardVolumes.length
+      const forwardVolumes = rawForwardTransactions.map((tx: any) => tx.volume)
+      const avgForwardVolume = forwardVolumes.reduce((sum: number, v: number) => sum + v, 0) / forwardVolumes.length
 
       // Calculate volume scale factor to match backtest position sizes
       const volumeScaleFactor = avgBacktestVolume / avgForwardVolume
@@ -145,7 +145,7 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
       )
 
       // Scale BOTH volume and profit to match backtest position sizes
-      scaledForwardTransactions = rawForwardTransactions.map((tx) => ({
+      scaledForwardTransactions = rawForwardTransactions.map((tx: any) => ({
         ...tx,
         volume: tx.volume * volumeScaleFactor, // Scale volume to match backtest
         profit: tx.profit * volumeScaleFactor, // Profit scales with volume

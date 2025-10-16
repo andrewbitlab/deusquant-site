@@ -56,3 +56,6 @@ public/uploads/
 
 # Build artifacts
 *.tsbuildinfo
+
+# Local Netlify folder
+.netlify
