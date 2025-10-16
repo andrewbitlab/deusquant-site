@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 
 interface LogoProps {
@@ -10,9 +11,9 @@ interface LogoProps {
 
 export function Logo({ className, showText = true }: LogoProps) {
   return (
-    <div className={cn('flex items-center', className)}>
+    <Link href="/" className={cn('flex items-center', className)}>
       {/* Complete logo with icon + text (logo-name.png contains both) */}
-      <div className="relative h-12">
+      <div className="relative h-12 hover:opacity-90 transition-opacity cursor-pointer">
         <Image
           src="/brand/logo-name.png"
           alt="DEUS QUANT"
@@ -22,6 +23,6 @@ export function Logo({ className, showText = true }: LogoProps) {
           priority
         />
       </div>
-    </div>
+    </Link>
   )
 }
