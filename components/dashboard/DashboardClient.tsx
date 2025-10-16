@@ -34,9 +34,9 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
         stats: [
           { label: 'Total Strategies', value: 0, format: 'number' as const },
           { label: 'Total Profit', value: 0, format: 'currency' as const },
+          { label: 'Max Drawdown', value: 0, format: 'currency' as const },
           { label: 'Sharpe Ratio', value: 0, format: 'ratio' as const },
           { label: 'Calmar Ratio', value: 0, format: 'ratio' as const },
-          { label: 'Max Drawdown', value: 0, format: 'currency' as const },
         ],
         profitCurve: [],
         forwardTestStartDate: undefined,
@@ -114,9 +114,9 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
         stats: [
           { label: 'Total Strategies', value: selected.length, format: 'number' as const },
           { label: 'Total Profit', value: totalProfit, format: 'currency' as const },
+          { label: 'Max Drawdown', value: maxDrawdown, format: 'currency' as const },
           { label: 'Sharpe Ratio', value: 0, format: 'ratio' as const },
           { label: 'Calmar Ratio', value: 0, format: 'ratio' as const },
-          { label: 'Max Drawdown', value: maxDrawdown, format: 'currency' as const },
         ],
         profitCurve: portfolioEquityCurve,
         forwardTestStartDate: undefined,
@@ -157,9 +157,9 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
     const stats = [
       { label: 'Total Strategies', value: selected.length, format: 'number' as const },
       { label: 'Total Profit', value: totalProfit, format: 'currency' as const },
+      { label: 'Max Drawdown', value: maxDrawdown, format: 'currency' as const },
       { label: 'Sharpe Ratio', value: portfolioSharpe, format: 'ratio' as const },
       { label: 'Calmar Ratio', value: calmarRatio, format: 'ratio' as const },
-      { label: 'Max Drawdown', value: maxDrawdown, format: 'currency' as const },
     ]
 
     // Determine forward test start date (earliest among selected strategies)
@@ -237,7 +237,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       </div>
 
       <div className="text-center text-sm text-text-muted py-8">
-        DEUS QUANT Portfolio System v1.0.37 - Professional Trading Analytics
+        DEUS QUANT Portfolio System v1.0.38 - Professional Trading Analytics
       </div>
     </div>
   )
