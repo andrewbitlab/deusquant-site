@@ -115,7 +115,7 @@ export function StrategyTable({
                       : 'text-accent-loss'
                   }`}
                 >
-                  ${strategy.totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${Math.round(strategy.totalProfit).toLocaleString('en-US')}
                 </td>
                 <td className="font-mono">{strategy.winRate.toFixed(2)}%</td>
                 <td className="font-mono text-accent-loss">

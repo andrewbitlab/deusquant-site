@@ -54,7 +54,7 @@ export function EquityCurve({
           <YAxis
             stroke="#a0a3a9"
             tick={{ fill: '#7a7d84', fontSize: 12 }}
-            tickFormatter={(value) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            tickFormatter={(value) => `$${Math.round(value).toLocaleString('en-US')}`}
           />
 
           <Tooltip
@@ -65,8 +65,8 @@ export function EquityCurve({
               fontSize: 12,
             }}
             formatter={(value: number, name: string) => {
-              if (name === 'equity') return [`$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Profit']
-              if (name === 'drawdown') return [`$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Drawdown']
+              if (name === 'equity') return [`$${Math.round(value).toLocaleString('en-US')}`, 'Profit']
+              if (name === 'drawdown') return [`$${Math.round(Math.abs(value)).toLocaleString('en-US')}`, 'Drawdown']
               return [value, name]
             }}
           />
