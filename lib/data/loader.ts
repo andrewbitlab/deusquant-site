@@ -156,14 +156,6 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
       console.log(
         `Strategy ${magicNumber}: Scaled ${scaledForwardTransactions.length} forward test transactions (volume + profit)`
       )
-
-      // Verify position sizes by sampling first 3 transactions
-      console.log(`Strategy ${magicNumber}: Position size verification:`)
-      const sampleBacktest = backtestTransactions.slice(0, 3).filter(tx => tx.type === 'BUY' || tx.type === 'SELL')
-      const sampleForward = scaledForwardTransactions.slice(0, 3)
-
-      console.log(`  Backtest samples: ${sampleBacktest.map(tx => `${tx.volume.toFixed(4)} lots`).join(', ')}`)
-      console.log(`  Forward (scaled): ${sampleForward.map(tx => `${tx.volume.toFixed(4)} lots`).join(', ')}`)
     }
 
     // STEP 3: Merge backtest (normalized) + forward test (scaled to match)
@@ -208,8 +200,8 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
       symbol,
       timeframe,
       totalProfit: normalizedStats.totalNetProfit,
-      totalTrades: normalizedStats.totalTrades,
-      winRate: normalizedStats.winRate,
+      totalTrades: backtest.summary.totalTrades, // Use Excel position count
+      winRate: backtest.summary.winRate, // Use Excel position-based winRate
       profitFactor: normalizedStats.profitFactor,
       maxDrawdown: targetDrawdown, // Normalized to $1000
       maxDrawdownPercent: normalizedStats.maxDrawdownPercent,
