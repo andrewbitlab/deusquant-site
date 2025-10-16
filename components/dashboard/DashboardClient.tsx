@@ -196,7 +196,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
           Portfolio Dashboard
         </h1>
         <p className="text-text-secondary">
-          {strategies.length} trading strategies loaded from backtest data
+          {strategies.length} trading strategies loaded from backtest + live forward test (out of sample) data
         </p>
       </div>
 
