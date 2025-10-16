@@ -21,11 +21,35 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'DEUS QUANT Portfolio',
-  description: 'Professional algorithmic trading strategies portfolio presentation system',
+  title: 'Deus Quant',
+  description: 'Quantitative Trading & Portfolio Management',
   icons: {
     icon: '/images/logo.png',
     apple: '/images/logo.png',
+  },
+  openGraph: {
+    siteName: 'Deus Quant',
+    title: 'Deus Quant',
+    description: 'Quantitative Trading & Portfolio Management',
+    url: 'https://deusquant.com',
+    type: 'website',
+    images: [
+      {
+        url: 'https://deusquant.com/images/logo.png',
+        width: 800,
+        height: 600,
+        alt: 'Deus Quant',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Deus Quant',
+    description: 'Quantitative Trading & Portfolio Management',
+    images: ['https://deusquant.com/images/logo.png'],
+  },
+  alternates: {
+    canonical: 'https://deusquant.com',
   },
 }
 
