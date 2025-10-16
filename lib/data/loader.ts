@@ -30,9 +30,16 @@ function loadStrategyNames(): Record<string, string> {
 /**
  * Get strategy name by magic number
  */
-function getStrategyName(magicNumber: number, strategyNames: Record<string, string>): string {
+function getStrategyName(
+  magicNumber: number,
+  strategyNames: Record<string, string>,
+  customComment?: string
+): string {
+  // Priority: 1. names.json, 2. customComment, 3. fallback
   const name = strategyNames[magicNumber.toString()]
-  return name || `Strategy ${magicNumber}`
+  if (name) return name
+  if (customComment) return customComment
+  return `Strategy ${magicNumber}`
 }
 
 /**
@@ -249,7 +256,7 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
 
     strategies.push({
       magicNumber,
-      name: getStrategyName(magicNumber, strategyNames),
+      name: getStrategyName(magicNumber, strategyNames, backtest.metadata.customComment),
       symbol,
       timeframe,
       totalProfit: normalizedStats.totalNetProfit,

@@ -66,6 +66,7 @@ export class MT5ExcelParser {
     // Look for metadata in the first rows
     // Polish MT5 format has data in column 3 (index 3)
     let magicNumber = 0
+    let customComment: string | undefined
     let currency = 'USD'
     let accountNumber: string | undefined
     let broker: string | undefined
@@ -75,6 +76,14 @@ export class MT5ExcelParser {
       const row = data[i]
       const label = String(row[0] || '').toLowerCase()
       const value3 = String(row[3] || '')
+
+      // CustomComment is in column 3
+      if (value3.toLowerCase().includes('customcomment')) {
+        const match = value3.match(/CustomComment[=\s]*(.+)/i)
+        if (match) {
+          customComment = match[1].trim()
+        }
+      }
 
       // MagicNumber is in column 3
       if (label.includes('parametry') || value3.toLowerCase().includes('magicnumber')) {
@@ -97,6 +106,7 @@ export class MT5ExcelParser {
 
     return {
       magicNumber,
+      customComment,
       currency,
       accountNumber,
       broker,

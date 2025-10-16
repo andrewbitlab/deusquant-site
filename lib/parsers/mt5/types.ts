@@ -2,6 +2,7 @@
 
 export interface MT5Metadata {
   magicNumber: number
+  customComment?: string
   accountNumber?: string
   broker?: string
   currency: string
