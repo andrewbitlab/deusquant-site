@@ -1,10 +1,9 @@
 'use client'
 
 import { Logo } from '../brand/Logo'
-import { RefreshCw, Upload as UploadIcon } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 
 export function DashboardHeader() {
   const router = useRouter()
@@ -83,14 +82,6 @@ export function DashboardHeader() {
                 {currentTime || '—'}
               </span>
             </div>
-
-            <Link
-              href="/upload"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-deus-gray hover:bg-bg-secondary rounded-md transition-colors"
-            >
-              <UploadIcon className="h-4 w-4" />
-              Upload
-            </Link>
 
             <button
               onClick={handleRefresh}
