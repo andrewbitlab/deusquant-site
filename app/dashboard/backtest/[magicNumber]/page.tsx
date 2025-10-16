@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -16,6 +16,10 @@ export default function BacktestReportPage({ params }: BacktestReportPageProps) 
     // Read HTML report file from data directory (UTF-16 LE encoding from MT5)
     const filePath = join(process.cwd(), 'data', 'backtest', 'html', `${magicNumber}.html`)
     let htmlContent = readFileSync(filePath, 'utf16le')
+
+    // Check if MAE/MFE chart image exists
+    const mafePath = join(process.cwd(), 'data', 'backtest', 'html', `${magicNumber}-mafe.png`)
+    const hasMafeChart = existsSync(mafePath)
 
     // Rewrite image paths to use our API route
     // Replace src="filename.png" with src="/api/backtest/images/filename.png"
@@ -64,6 +68,22 @@ export default function BacktestReportPage({ params }: BacktestReportPageProps) 
           </div>
         </div>
 
+        {/* MAE/MFE Chart (if available) */}
+        {hasMafeChart && (
+          <div className="max-w-7xl mx-auto px-4 pt-6">
+            <div className="bg-white rounded-lg border border-border-light shadow-deus-sm p-6">
+              <h2 className="font-display text-lg font-semibold mb-4 text-deus-gray">
+                MAE/MFE Analysis
+              </h2>
+              <img
+                src={`/api/backtest/images/${magicNumber}-mafe.png`}
+                alt={`MAE/MFE Chart for Strategy ${magicNumber}`}
+                className="mx-auto"
+              />
+            </div>
+          </div>
+        )}
+
         {/* HTML Report Content */}
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="bg-white rounded-lg border border-border-light shadow-deus-sm p-6">
@@ -84,7 +104,7 @@ export default function BacktestReportPage({ params }: BacktestReportPageProps) 
 // Generate static params for all available backtest reports
 export async function generateStaticParams() {
   // List of available magic numbers with backtest HTML reports
-  const availableReports = ['202501021', '202501025', '202501027']
+  const availableReports = ['202501021', '202501025', '202501027', '77701']
 
   return availableReports.map((magicNumber) => ({
     magicNumber,

@@ -18,7 +18,7 @@ import {
  */
 export async function loadBacktests(): Promise<MT5ParseResult[]> {
   const dataDir = join(process.cwd(), 'data', 'backtest')
-  const files = ['202501021.xlsx', '202501025.xlsx', '202501027.xlsx']
+  const files = ['202501021.xlsx', '202501025.xlsx', '202501027.xlsx', '77701.xlsx']
 
   const results: MT5ParseResult[] = []
 
