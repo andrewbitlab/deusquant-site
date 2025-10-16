@@ -28,6 +28,15 @@ export function EquityCurve({
   showDrawdown = true,
   forwardTestStartDate
 }: EquityCurveProps) {
+  // Calculate dynamic Y-axis domain based on actual data
+  const maxEquity = Math.max(...data.map(d => d.equity))
+  const minDrawdown = Math.min(...data.map(d => d.drawdown || 0))
+
+  // Round down to nearest $2500 for better visibility
+  const yAxisMin = Math.floor(minDrawdown / 2500) * 2500
+  // Add some padding to max equity (10%)
+  const yAxisMax = Math.ceil(maxEquity * 1.1 / 2500) * 2500
+
   return (
     <div className="w-full h-[400px]">
       <ResponsiveContainer width="100%" height="100%">
@@ -55,6 +64,7 @@ export function EquityCurve({
             stroke="#a0a3a9"
             tick={{ fill: '#7a7d84', fontSize: 12 }}
             tickFormatter={(value) => `$${Math.round(value).toLocaleString('en-US')}`}
+            domain={[yAxisMin, yAxisMax]}
           />
 
           <Tooltip
