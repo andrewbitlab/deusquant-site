@@ -233,7 +233,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       </div>
 
       <div className="text-center text-sm text-text-muted py-8">
-        DEUS QUANT Portfolio System v1.0.0 - Professional Trading Analytics
+        DEUS QUANT Portfolio System v1.0.37 - Professional Trading Analytics
       </div>
     </div>
   )
