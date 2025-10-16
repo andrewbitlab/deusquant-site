@@ -17,7 +17,7 @@ export function StatsPanel({ stats }: StatsPanelProps) {
 
     switch (stat.format) {
       case 'currency':
-        return `$${stat.value.toLocaleString()}`
+        return `$${stat.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       case 'percent':
         return `${stat.value.toFixed(2)}%`
       default:
