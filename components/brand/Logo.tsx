@@ -10,33 +10,18 @@ interface LogoProps {
 
 export function Logo({ className, showText = true }: LogoProps) {
   return (
-    <div className={cn('flex items-center gap-3', className)}>
-      {/* Logo Icon - 40px */}
-      <div className="relative w-10 h-10 flex-shrink-0">
+    <div className={cn('flex items-center', className)}>
+      {/* Complete logo with icon + text (logo-name.png contains both) */}
+      <div className="relative h-10">
         <Image
-          src="/brand/logo-icon.png"
-          alt="DEUS QUANT Logo"
-          width={40}
+          src="/brand/logo-name.png"
+          alt="DEUS QUANT"
+          width={320}
           height={40}
-          className="w-full h-full object-contain"
+          className="h-full w-auto object-contain"
           priority
         />
       </div>
-      {showText && (
-        <div className="flex items-center">
-          {/* Logo Name - scaled to match icon height (40px) */}
-          <div className="relative h-10">
-            <Image
-              src="/brand/logo-name.png"
-              alt="DEUS QUANT"
-              width={240}
-              height={40}
-              className="h-full w-auto object-contain"
-              priority
-            />
-          </div>
-        </div>
-      )}
     </div>
   )
 }
