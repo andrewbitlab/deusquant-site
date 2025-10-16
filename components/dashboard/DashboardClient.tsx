@@ -34,8 +34,8 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
         stats: [
           { label: 'Total Strategies', value: 0, format: 'number' as const },
           { label: 'Total Profit', value: 0, format: 'currency' as const },
-          { label: 'Avg Win Rate', value: 0, format: 'percent' as const },
-          { label: 'Avg Sharpe Ratio', value: 0, format: 'number' as const },
+          { label: 'Sharpe Ratio', value: 0, format: 'number' as const },
+          { label: 'Calmar Ratio', value: 0, format: 'number' as const },
         ],
         profitCurve: [],
         forwardTestStartDate: undefined,
@@ -66,14 +66,20 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
     const totalProfit = combinedStats.totalNetProfit * scaleFactor
     const avgWinRate =
       selected.reduce((sum, s) => sum + s.winRate, 0) / selected.length
-    const avgSharpe =
-      selected.reduce((sum, s) => sum + s.sharpeRatio, 0) / selected.length
+
+    // Portfolio Sharpe Ratio (calculated on combined transactions)
+    const portfolioSharpe = combinedStats.sharpeRatio
+
+    // Calmar Ratio = Total Return / Max Drawdown
+    const calmarRatio = combinedStats.maxDrawdown > 0
+      ? Math.abs(combinedStats.totalNetProfit / combinedStats.maxDrawdown)
+      : 0
 
     const stats = [
       { label: 'Total Strategies', value: selected.length, format: 'number' as const },
       { label: 'Total Profit', value: totalProfit, format: 'currency' as const },
-      { label: 'Avg Win Rate', value: avgWinRate, format: 'percent' as const },
-      { label: 'Avg Sharpe Ratio', value: avgSharpe, format: 'number' as const },
+      { label: 'Sharpe Ratio', value: portfolioSharpe, format: 'number' as const },
+      { label: 'Calmar Ratio', value: calmarRatio, format: 'number' as const },
     ]
 
     // Determine forward test start date (earliest among selected strategies)
