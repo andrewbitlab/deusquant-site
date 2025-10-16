@@ -187,6 +187,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
     winRate: s.winRate,
     maxDrawdown: s.maxDrawdown, // Now in dollars
     sharpeRatio: s.sharpeRatio,
+    hasForwardTest: s.hasForwardTest,
   }))
 
   return (

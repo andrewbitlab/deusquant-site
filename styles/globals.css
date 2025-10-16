@@ -133,6 +133,10 @@
     @apply badge bg-amber-100 text-accent-warning;
   }
 
+  .badge-secondary {
+    @apply badge bg-gray-100 text-text-muted;
+  }
+
   /* Chart Tooltips */
   .chart-tooltip {
     @apply bg-white border border-border-default rounded-md shadow-deus-md p-3;

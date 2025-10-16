@@ -12,6 +12,7 @@ interface Strategy {
   winRate: number
   maxDrawdown: number // Now in dollars
   sharpeRatio: number
+  hasForwardTest: boolean
   selected?: boolean
 }
 
@@ -142,7 +143,11 @@ export function StrategyTable({
                   </Link>
                 </td>
                 <td>
-                  <span className="badge-info">Active</span>
+                  {strategy.hasForwardTest ? (
+                    <span className="badge-info">Active</span>
+                  ) : (
+                    <span className="badge-secondary">Backtest Only</span>
+                  )}
                 </td>
               </tr>
             ))}
