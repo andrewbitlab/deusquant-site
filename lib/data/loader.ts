@@ -14,6 +14,28 @@ import {
 } from '../calculators/statistics'
 
 /**
+ * Load strategy names from names.json
+ */
+function loadStrategyNames(): Record<string, string> {
+  try {
+    const namesPath = join(process.cwd(), 'data', 'names.json')
+    const namesContent = readFileSync(namesPath, 'utf-8')
+    return JSON.parse(namesContent)
+  } catch (error) {
+    console.warn('Failed to load strategy names from names.json:', error)
+    return {}
+  }
+}
+
+/**
+ * Get strategy name by magic number
+ */
+function getStrategyName(magicNumber: number, strategyNames: Record<string, string>): string {
+  const name = strategyNames[magicNumber.toString()]
+  return name || `Strategy ${magicNumber}`
+}
+
+/**
  * Load all backtest files from data directory
  */
 export async function loadBacktests(): Promise<MT5ParseResult[]> {
@@ -94,6 +116,9 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
   const backtests = await loadBacktests()
   const forwardTestData = await loadForwardTests()
   const strategies: StrategyData[] = []
+
+  // Load strategy names from names.json
+  const strategyNames = loadStrategyNames()
 
   // Create a map of forward test transactions by magic number
   const forwardTestsByMagic = forwardTestData?.tradesByStrategy || new Map()
@@ -196,7 +221,7 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
 
     strategies.push({
       magicNumber,
-      name: `Strategy ${magicNumber}`,
+      name: getStrategyName(magicNumber, strategyNames),
       symbol,
       timeframe,
       totalProfit: normalizedStats.totalNetProfit,
