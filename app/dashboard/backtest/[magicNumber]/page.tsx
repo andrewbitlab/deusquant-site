@@ -15,7 +15,14 @@ export default function BacktestReportPage({ params }: BacktestReportPageProps) 
   try {
     // Read HTML report file from data directory (UTF-16 LE encoding from MT5)
     const filePath = join(process.cwd(), 'data', 'backtest', 'html', `${magicNumber}.html`)
-    const htmlContent = readFileSync(filePath, 'utf16le')
+    let htmlContent = readFileSync(filePath, 'utf16le')
+
+    // Rewrite image paths to use our API route
+    // Replace src="filename.png" with src="/api/backtest/images/filename.png"
+    htmlContent = htmlContent.replace(
+      /src="([^"]+\.png)"/gi,
+      'src="/api/backtest/images/$1"'
+    )
 
     return (
       <div className="min-h-screen bg-bg-secondary">
