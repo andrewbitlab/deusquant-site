@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { MT5ExcelParser } from '../parsers/mt5/excel-parser'
 import { ForwardCSVParser } from '../parsers/csv/forward-parser'
@@ -40,11 +40,16 @@ function getStrategyName(magicNumber: number, strategyNames: Record<string, stri
  */
 export async function loadBacktests(): Promise<MT5ParseResult[]> {
   const dataDir = join(process.cwd(), 'data', 'backtest')
-  const files = ['202501021.xlsx', '202501025.xlsx', '202501027.xlsx', '77701.xlsx']
+
+  // Dynamically read all .xlsx files from the backtest directory
+  const allFiles = readdirSync(dataDir)
+  const xlsxFiles = allFiles.filter(file => file.endsWith('.xlsx'))
+
+  console.log(`Found ${xlsxFiles.length} backtest files: ${xlsxFiles.join(', ')}`)
 
   const results: MT5ParseResult[] = []
 
-  for (const filename of files) {
+  for (const filename of xlsxFiles) {
     try {
       const filePath = join(dataDir, filename)
       const buffer = readFileSync(filePath)
@@ -56,9 +61,10 @@ export async function loadBacktests(): Promise<MT5ParseResult[]> {
 
       if (result.success) {
         results.push(result.data)
+        console.log(`✓ Loaded backtest: ${filename}`)
       }
     } catch (error) {
-      console.error(`Failed to load ${filename}:`, error)
+      console.error(`✗ Failed to load ${filename}:`, error)
     }
   }
 
@@ -66,12 +72,34 @@ export async function loadBacktests(): Promise<MT5ParseResult[]> {
 }
 
 /**
- * Load forward test data
+ * Load forward test data - automatically loads the most recent CSV file
  */
 export async function loadForwardTests(): Promise<ForwardTestData | null> {
   try {
     const dataDir = join(process.cwd(), 'data', 'forward')
-    const filePath = join(dataDir, 'orders-deusfund-sqx1-2_8-10-2025.csv')
+
+    // Find all CSV files in forward directory
+    const allFiles = readdirSync(dataDir)
+    const csvFiles = allFiles.filter(file => file.endsWith('.csv'))
+
+    if (csvFiles.length === 0) {
+      console.log('No forward test CSV files found')
+      return null
+    }
+
+    // Get the most recent CSV file (by modification time)
+    const csvFilesWithStats = csvFiles.map(file => {
+      const filePath = join(dataDir, file)
+      const stats = require('fs').statSync(filePath)
+      return { file, mtime: stats.mtime }
+    })
+
+    csvFilesWithStats.sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
+    const latestCsvFile = csvFilesWithStats[0].file
+
+    console.log(`Loading forward tests from: ${latestCsvFile}`)
+
+    const filePath = join(dataDir, latestCsvFile)
 
     // Read CSV file content as string
     const csvContent = readFileSync(filePath, 'utf-8')

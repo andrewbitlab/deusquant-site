@@ -42,38 +42,115 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       }
     }
 
-    // Combine all transactions from selected strategies
-    const allTransactions = selected.flatMap((s) => s.transactions)
+    // Build portfolio equity curve with carry-forward logic
+    // Each strategy is already normalized to $1000 max DD
 
-    // Calculate combined statistics
-    const combinedStats = calculateStatistics(allTransactions, 10000)
+    // Step 1: Collect all unique dates from all strategies
+    const allDates = new Set<string>()
+    for (const strategy of selected) {
+      for (const point of strategy.profitCurve) {
+        allDates.add(point.date)
+      }
+    }
 
-    // Build combined profit curve
-    const rawProfitCurve = buildProfitCurve(allTransactions)
-    const profitCurveWithDrawdowns = calculateDrawdowns(rawProfitCurve)
+    const sortedDates = Array.from(allDates).sort()
 
-    // Normalize to max DD = $1000
-    const normalizedCurve = normalizeProfitCurve(
-      profitCurveWithDrawdowns,
-      combinedStats.maxDrawdown,
-      1000
-    )
+    // Step 2: Build portfolio equity curve with carry-forward
+    const portfolioEquityCurve: ProfitCurvePoint[] = []
+    const lastKnownProfit = new Map<number, number>() // magicNumber -> last profit
 
-    // Calculate scale factor for stats
-    const scaleFactor =
-      combinedStats.maxDrawdown > 0 ? 1000 / combinedStats.maxDrawdown : 1
+    // Initialize all strategies with 0 profit
+    for (const strategy of selected) {
+      lastKnownProfit.set(strategy.magicNumber, 0)
+    }
 
-    const totalProfit = combinedStats.totalNetProfit * scaleFactor
-    const avgWinRate =
-      selected.reduce((sum, s) => sum + s.winRate, 0) / selected.length
+    for (const date of sortedDates) {
+      // Update last known profit for strategies that have a point on this date
+      for (const strategy of selected) {
+        const point = strategy.profitCurve.find((p) => p.date === date)
+        if (point) {
+          lastKnownProfit.set(strategy.magicNumber, point.profit)
+        }
+      }
 
-    // Portfolio Sharpe Ratio (calculated on combined transactions)
-    const portfolioSharpe = combinedStats.sharpeRatio
+      // Sum all last known profits for portfolio equity on this date
+      let portfolioProfit = 0
+      for (const profit of lastKnownProfit.values()) {
+        portfolioProfit += profit
+      }
 
-    // Calmar Ratio = Total Return / Max Drawdown
-    const calmarRatio = combinedStats.maxDrawdown > 0
-      ? Math.abs(combinedStats.totalNetProfit / combinedStats.maxDrawdown)
+      portfolioEquityCurve.push({
+        date,
+        profit: portfolioProfit,
+        drawdown: 0, // Will calculate below
+      })
+    }
+
+    // Step 3: Calculate drawdowns on portfolio curve
+    let maxProfit = 0
+    let maxDrawdown = 0
+    for (const point of portfolioEquityCurve) {
+      if (point.profit > maxProfit) {
+        maxProfit = point.profit
+      }
+      point.drawdown = maxProfit - point.profit
+      if (point.drawdown > maxDrawdown) {
+        maxDrawdown = point.drawdown
+      }
+    }
+
+    // Step 4: Calculate Total Profit (sum of each strategy's final profit)
+    const totalProfit = selected.reduce((sum, strategy) => {
+      const finalProfit = strategy.profitCurve.length > 0
+        ? strategy.profitCurve[strategy.profitCurve.length - 1].profit
+        : 0
+      return sum + finalProfit
+    }, 0)
+
+    // Step 5: Calculate metrics
+    if (portfolioEquityCurve.length < 2) {
+      return {
+        stats: [
+          { label: 'Total Strategies', value: selected.length, format: 'number' as const },
+          { label: 'Total Profit', value: totalProfit, format: 'currency' as const },
+          { label: 'Sharpe Ratio', value: 0, format: 'number' as const },
+          { label: 'Calmar Ratio', value: 0, format: 'number' as const },
+        ],
+        profitCurve: portfolioEquityCurve,
+        forwardTestStartDate: undefined,
+      }
+    }
+
+    // Calculate time period
+    const firstDate = new Date(portfolioEquityCurve[0].date)
+    const lastDate = new Date(portfolioEquityCurve[portfolioEquityCurve.length - 1].date)
+    const yearsElapsed = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+
+    // Initial capital = $1000 per strategy (each normalized to $1000 max DD)
+    const initialCapital = 1000 * selected.length
+
+    // Annualized return (CAGR)
+    const annualizedReturn = yearsElapsed > 0
+      ? (Math.pow((initialCapital + totalProfit) / initialCapital, 1 / yearsElapsed) - 1) * 100
       : 0
+
+    // Calmar Ratio = Annualized Return % / Max Drawdown %
+    const maxDrawdownPercent = (maxDrawdown / initialCapital) * 100
+    const calmarRatio = maxDrawdownPercent > 0 ? annualizedReturn / maxDrawdownPercent : 0
+
+    // Calculate Sharpe Ratio from daily returns of portfolio equity
+    const dailyReturns: number[] = []
+    for (let i = 1; i < portfolioEquityCurve.length; i++) {
+      const prevEquity = initialCapital + portfolioEquityCurve[i - 1].profit
+      const currEquity = initialCapital + portfolioEquityCurve[i].profit
+      const dailyReturn = (currEquity - prevEquity) / prevEquity
+      dailyReturns.push(dailyReturn)
+    }
+
+    const avgDailyReturn = dailyReturns.reduce((sum, r) => sum + r, 0) / dailyReturns.length
+    const variance = dailyReturns.reduce((sum, r) => sum + Math.pow(r - avgDailyReturn, 2), 0) / dailyReturns.length
+    const stdDev = Math.sqrt(variance)
+    const portfolioSharpe = stdDev > 0 ? (avgDailyReturn / stdDev) * Math.sqrt(252) : 0
 
     const stats = [
       { label: 'Total Strategies', value: selected.length, format: 'number' as const },
@@ -90,7 +167,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
 
     return {
       stats,
-      profitCurve: normalizedCurve,
+      profitCurve: portfolioEquityCurve,
       forwardTestStartDate,
     }
   }, [strategies, selectedIds])
@@ -138,7 +215,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
           data={portfolioData.profitCurve.map((p) => ({
             date: p.date,
             equity: p.profit, // Use profit as equity for the chart
-            drawdown: p.drawdown,
+            drawdown: -p.drawdown, // Negative so it displays below $0 axis
           }))}
           showDrawdown={true}
           forwardTestStartDate={portfolioData.forwardTestStartDate}

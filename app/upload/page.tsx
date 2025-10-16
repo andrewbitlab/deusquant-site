@@ -1,86 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/brand/Logo'
-import { Upload, FileSpreadsheet, FileText, CheckCircle, XCircle } from 'lucide-react'
+import { FileUploader } from '@/components/upload/FileUploader'
+import { FileSpreadsheet, Image, FileText } from 'lucide-react'
 
 export default function UploadPage() {
   const router = useRouter()
-  const [uploading, setUploading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [dragActive, setDragActive] = useState(false)
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true)
-    } else if (e.type === 'dragleave') {
-      setDragActive(false)
-    }
-  }
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      await uploadFile(e.dataTransfer.files[0])
-    }
-  }
-
-  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      await uploadFile(e.target.files[0])
-    }
-  }
-
-  const uploadFile = async (file: File) => {
-    setUploading(true)
-    setMessage(null)
-
-    try {
-      // Determine file type
-      const isBacktest = file.name.endsWith('.xlsx')
-      const isForward = file.name.endsWith('.csv')
-
-      if (!isBacktest && !isForward) {
-        throw new Error('Invalid file type. Please upload .xlsx (backtest) or .csv (forward test) files.')
-      }
-
-      const endpoint = isBacktest ? '/api/upload/backtest' : '/api/upload/forward'
-
-      // Create FormData
-      const formData = new FormData()
-      formData.append('file', file)
-
-      // Upload file
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        body: formData,
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed')
-      }
-
-      setMessage({
-        type: 'success',
-        text: `Successfully uploaded ${file.name} to ${isBacktest ? 'backtest' : 'forward test'} directory`,
-      })
-    } catch (error) {
-      setMessage({
-        type: 'error',
-        text: error instanceof Error ? error.message : 'Upload failed',
-      })
-    } finally {
-      setUploading(false)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-bg-secondary">
@@ -104,137 +30,46 @@ export default function UploadPage() {
             Upload Strategy Files
           </h1>
           <p className="text-text-secondary">
-            Upload MT5 backtest reports (.xlsx) or forward test data (.csv) to the data directory
+            Upload all files for a new strategy - xlsx goes to data/backtest/, html and images to data/backtest/html/
           </p>
         </div>
 
-        {/* Upload Area */}
+        {/* Upload Component */}
         <div className="card mb-8">
-          <div
-            className={`relative border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
-              dragActive
-                ? 'border-deus-gray bg-bg-tertiary'
-                : 'border-border-default hover:border-deus-gray'
-            } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-          >
-            <input
-              type="file"
-              id="file-upload"
-              className="hidden"
-              accept=".xlsx,.csv"
-              onChange={handleFileInput}
-              disabled={uploading}
-            />
-
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-bg-tertiary flex items-center justify-center">
-                <Upload className="h-8 w-8 text-text-muted" />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer font-medium text-deus-gray hover:underline"
-                >
-                  Click to upload
-                </label>
-                <span className="text-text-secondary"> or drag and drop</span>
-              </div>
-
-              <p className="text-sm text-text-muted">
-                Supported formats: .xlsx (backtest), .csv (forward test)
-              </p>
-
-              {uploading && (
-                <div className="mt-4">
-                  <div className="w-48 h-2 bg-bg-tertiary rounded-full overflow-hidden">
-                    <div className="h-full bg-deus-gray animate-pulse" style={{ width: '100%' }} />
-                  </div>
-                  <p className="text-sm text-text-secondary mt-2">Uploading...</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Message */}
-          {message && (
-            <div
-              className={`mt-4 p-4 rounded-lg flex items-start gap-3 ${
-                message.type === 'success'
-                  ? 'bg-green-50 border border-green-200'
-                  : 'bg-red-50 border border-red-200'
-              }`}
-            >
-              {message.type === 'success' ? (
-                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-              ) : (
-                <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-              )}
-              <p
-                className={`text-sm ${
-                  message.type === 'success' ? 'text-green-800' : 'text-red-800'
-                }`}
-              >
-                {message.text}
-              </p>
-            </div>
-          )}
+          <FileUploader />
         </div>
 
-        {/* Instructions */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="card">
-            <div className="flex items-start gap-3 mb-3">
-              <FileSpreadsheet className="h-6 w-6 text-deus-gray flex-shrink-0" />
-              <div>
-                <h3 className="font-display font-semibold text-deus-gray mb-1">
-                  Backtest Reports
-                </h3>
-                <p className="text-sm text-text-secondary">
-                  MT5 Excel export files (.xlsx) containing strategy backtest results
-                </p>
-              </div>
-            </div>
-            <ul className="space-y-1 text-sm text-text-secondary ml-9">
-              <li>• File format: .xlsx</li>
-              <li>• Contains: Performance metrics, transactions, equity curve</li>
-              <li>• Saved to: data/backtest/</li>
-            </ul>
+        {/* Example */}
+        <div className="card bg-blue-50 border-blue-200">
+          <h3 className="font-display font-semibold text-blue-900 mb-3">
+            Example: Upload Strategy 77702
+          </h3>
+          <p className="text-sm text-blue-800 mb-3">
+            Drop all these files at once:
+          </p>
+          <div className="bg-white rounded p-3 font-mono text-xs text-blue-900 space-y-1">
+            <div>77702.xlsx</div>
+            <div>77702.html</div>
+            <div>77702.png</div>
+            <div>77702-holding.png</div>
+            <div>77702-hst.png</div>
+            <div>77702-mafe.png</div>
+            <div>77702-mfemae.png</div>
           </div>
-
-          <div className="card">
-            <div className="flex items-start gap-3 mb-3">
-              <FileText className="h-6 w-6 text-deus-gray flex-shrink-0" />
-              <div>
-                <h3 className="font-display font-semibold text-deus-gray mb-1">
-                  Forward Tests
-                </h3>
-                <p className="text-sm text-text-secondary">
-                  CSV files with real trading results from live or demo accounts
-                </p>
-              </div>
-            </div>
-            <ul className="space-y-1 text-sm text-text-secondary ml-9">
-              <li>• File format: .csv</li>
-              <li>• Contains: Order history, P&L, timestamps</li>
-              <li>• Saved to: data/forward/</li>
-            </ul>
-          </div>
+          <p className="text-sm text-blue-800 mt-3">
+            The system will automatically route each file to its correct location and update the dashboard.
+          </p>
         </div>
 
         {/* Next Steps */}
-        <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="font-display font-semibold text-blue-900 mb-2">
-            Next Steps
+        <div className="mt-6 p-6 bg-green-50 border border-green-200 rounded-lg">
+          <h3 className="font-display font-semibold text-green-900 mb-2">
+            After Upload
           </h3>
-          <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
-            <li>Upload your backtest and/or forward test files using the form above</li>
-            <li>Return to the dashboard and click the "Refresh" button</li>
-            <li>View your updated portfolio with the new strategy data</li>
+          <ol className="list-decimal list-inside space-y-1 text-sm text-green-800">
+            <li>Files are automatically sorted to data/backtest/ and data/backtest/html/</li>
+            <li>Strategy name is saved to data/names.json (if provided)</li>
+            <li>Refresh the dashboard to see your new strategy</li>
           </ol>
         </div>
       </div>

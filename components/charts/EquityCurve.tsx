@@ -31,7 +31,7 @@ export function EquityCurve({
   return (
     <div className="w-full h-[400px]">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+        <ComposedChart data={data} margin={{ top: 30, right: 30, left: 20, bottom: 0 }}>
           <defs>
             <linearGradient id="drawdownGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3} />
@@ -54,7 +54,7 @@ export function EquityCurve({
           <YAxis
             stroke="#a0a3a9"
             tick={{ fill: '#7a7d84', fontSize: 12 }}
-            tickFormatter={(value) => `$${value.toLocaleString()}`}
+            tickFormatter={(value) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           />
 
           <Tooltip
@@ -65,8 +65,8 @@ export function EquityCurve({
               fontSize: 12,
             }}
             formatter={(value: number, name: string) => {
-              if (name === 'equity') return [`$${value.toLocaleString()}`, 'Profit']
-              if (name === 'drawdown') return [`$${value.toLocaleString()}`, 'Drawdown']
+              if (name === 'equity') return [`$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Profit']
+              if (name === 'drawdown') return [`$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Drawdown']
               return [value, name]
             }}
           />
@@ -80,20 +80,12 @@ export function EquityCurve({
               strokeDasharray="5 5"
               label={{
                 value: 'Forward Test (Out of Sample)',
-                position: 'top',
+                position: 'insideTopRight',
                 fill: '#10b981',
                 fontSize: 12,
                 fontWeight: 600,
+                offset: 10,
               }}
-            />
-          )}
-
-          {showDrawdown && (
-            <Area
-              type="monotone"
-              dataKey="drawdown"
-              stroke="#dc2626"
-              fill="url(#drawdownGradient)"
             />
           )}
 
@@ -105,6 +97,15 @@ export function EquityCurve({
             dot={false}
             activeDot={{ r: 4, fill: '#54585f' }}
           />
+
+          {showDrawdown && (
+            <Area
+              type="monotone"
+              dataKey="drawdown"
+              stroke="#dc2626"
+              fill="url(#drawdownGradient)"
+            />
+          )}
         </ComposedChart>
       </ResponsiveContainer>
     </div>
