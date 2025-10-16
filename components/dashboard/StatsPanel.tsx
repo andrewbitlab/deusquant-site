@@ -4,7 +4,7 @@ interface Stat {
   label: string
   value: string | number
   change?: number
-  format?: 'currency' | 'percent' | 'number'
+  format?: 'currency' | 'percent' | 'number' | 'ratio'
 }
 
 interface StatsPanelProps {
@@ -20,6 +20,10 @@ export function StatsPanel({ stats }: StatsPanelProps) {
         return `$${Math.round(stat.value).toLocaleString('en-US')}`
       case 'percent':
         return `${stat.value.toFixed(2)}%`
+      case 'ratio':
+        return stat.value.toFixed(2)
+      case 'number':
+        return stat.value.toLocaleString()
       default:
         return stat.value.toLocaleString()
     }
