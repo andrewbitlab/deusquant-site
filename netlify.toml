@@ -31,10 +31,3 @@
   for = "/api/backtest/images/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-
-# Redirects
-[[redirects]]
-  from = "/"
-  to = "/dashboard"
-  status = 200
-  force = false
