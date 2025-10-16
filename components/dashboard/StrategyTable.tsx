@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 
 interface Strategy {
   id: string
@@ -88,6 +89,7 @@ export function StrategyTable({
               <th>Win Rate</th>
               <th>Max DD</th>
               <th>Sharpe</th>
+              <th>Report</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -119,6 +121,26 @@ export function StrategyTable({
                   ${strategy.maxDrawdown.toLocaleString()}
                 </td>
                 <td className="font-mono">{strategy.sharpeRatio.toFixed(2)}</td>
+                <td>
+                  <Link
+                    href={`/dashboard/backtest/${strategy.magicNumber}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-info hover:text-blue-700 hover:underline transition-colors"
+                    title="View Backtest Report"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
+                      <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                    </svg>
+                    View
+                  </Link>
+                </td>
                 <td>
                   <span className="badge-info">Active</span>
                 </td>
