@@ -34,10 +34,44 @@ export function EquityCurve({
   const maxEquity = Math.max(...data.map(d => d.equity))
   const minDrawdown = Math.min(...data.map(d => d.drawdown || 0))
 
-  // Round to appropriate increments based on format
-  const increment = isPercentage ? 10 : 2500
-  const yAxisMin = Math.floor(minDrawdown / increment) * increment
-  const yAxisMax = Math.ceil(maxEquity * 1.1 / increment) * increment
+  // Smart rounding function to get nice round numbers with equal intervals
+  const calculateNiceScale = (dataMin: number, dataMax: number) => {
+    // Add 10% padding to max
+    const rawMax = dataMax * 1.1
+    const range = rawMax - dataMin
+
+    // Determine appropriate step size based on range
+    let step: number
+    if (range <= 10) step = 1
+    else if (range <= 20) step = 2
+    else if (range <= 50) step = 5
+    else if (range <= 100) step = 10
+    else if (range <= 200) step = 20
+    else if (range <= 250) step = 25
+    else if (range <= 500) step = 50
+    else if (range <= 1000) step = 100
+    else if (range <= 2000) step = 200
+    else if (range <= 2500) step = 250
+    else if (range <= 5000) step = 500
+    else step = 1000
+
+    // Round min and max to nearest step
+    const niceMin = Math.floor(dataMin / step) * step
+    const niceMax = Math.ceil(rawMax / step) * step
+
+    // Generate ticks
+    const ticks: number[] = []
+    for (let i = niceMin; i <= niceMax; i += step) {
+      ticks.push(i)
+    }
+
+    return { min: niceMin, max: niceMax, ticks, step }
+  }
+
+  const yAxisConfig = calculateNiceScale(minDrawdown, maxEquity)
+  const yAxisMin = yAxisConfig.min
+  const yAxisMax = yAxisConfig.max
+  const yAxisTicks = yAxisConfig.ticks
 
   return (
     <div className="w-full h-[400px]">
@@ -78,6 +112,7 @@ export function EquityCurve({
                 : `$${Math.round(value).toLocaleString('en-US')}`
             }
             domain={[yAxisMin, yAxisMax]}
+            ticks={yAxisTicks}
           />
 
           <Tooltip
