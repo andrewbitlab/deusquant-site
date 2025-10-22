@@ -291,7 +291,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
           Portfolio Dashboard
         </h1>
         <p className="text-text-secondary">
-          {strategies.length} trading strategies loaded from backtest + live forward test (out of sample) data
+          {strategies.length} trading strategies loaded from backtest + live data
         </p>
       </div>
 
@@ -310,7 +310,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
           Portfolio Profit Curve (%)
           {portfolioData.forwardTestStartDate && (
             <span className="ml-3 text-sm font-normal text-text-secondary">
-              (Includes forward test data from {portfolioData.forwardTestStartDate})
+              (Includes live data from {portfolioData.forwardTestStartDate})
             </span>
           )}
         </h2>

@@ -88,7 +88,7 @@ export function EquityCurve({
             </linearGradient>
           </defs>
 
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" opacity={0.8} />
 
           <XAxis
             dataKey="date"
