@@ -63,9 +63,9 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       return {
         stats: [
           { label: 'Total Strategies', value: 0, format: 'number' as const },
-          { label: 'Total Profit %', value: 0, format: 'percent' as const },
-          { label: 'Monthly Profit %', value: 0, format: 'percent' as const },
-          { label: 'Max Drawdown %', value: 0, format: 'percent' as const },
+          { label: 'Total Profit', value: 0, format: 'percent' as const },
+          { label: 'Monthly Profit', value: 0, format: 'percent' as const },
+          { label: 'Max Drawdown', value: 0, format: 'percent' as const },
           { label: 'Sharpe Ratio', value: 0, format: 'ratio' as const },
           { label: 'Calmar Ratio', value: 0, format: 'ratio' as const },
         ],
@@ -146,9 +146,9 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       return {
         stats: [
           { label: 'Total Strategies', value: selected.length, format: 'number' as const },
-          { label: 'Total Profit %', value: 0, format: 'percent' as const },
-          { label: 'Monthly Profit %', value: 0, format: 'percent' as const },
-          { label: 'Max Drawdown %', value: 0, format: 'percent' as const },
+          { label: 'Total Profit', value: 0, format: 'percent' as const },
+          { label: 'Monthly Profit', value: 0, format: 'percent' as const },
+          { label: 'Max Drawdown', value: 0, format: 'percent' as const },
           { label: 'Sharpe Ratio', value: 0, format: 'ratio' as const },
           { label: 'Calmar Ratio', value: 0, format: 'ratio' as const },
         ],
@@ -208,9 +208,9 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       return {
         stats: [
           { label: 'Total Strategies', value: selected.length, format: 'number' as const },
-          { label: 'Total Profit %', value: totalProfitPercent, format: 'percent' as const },
-          { label: 'Monthly Profit %', value: 0, format: 'percent' as const },
-          { label: 'Max Drawdown %', value: maxDDPercent, format: 'percent' as const },
+          { label: 'Total Profit', value: totalProfitPercent, format: 'percent' as const },
+          { label: 'Monthly Profit', value: 0, format: 'percent' as const },
+          { label: 'Max Drawdown', value: maxDDPercent, format: 'percent' as const },
           { label: 'Sharpe Ratio', value: 0, format: 'ratio' as const },
           { label: 'Calmar Ratio', value: 0, format: 'ratio' as const },
         ],
@@ -253,9 +253,9 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
 
     const stats = [
       { label: 'Total Strategies', value: selected.length, format: 'number' as const },
-      { label: 'Total Profit %', value: totalProfitPercent, format: 'percent' as const },
-      { label: 'Monthly Profit %', value: monthlyProfitPercent, format: 'percent' as const },
-      { label: 'Max Drawdown %', value: maxDDPercent, format: 'percent' as const },
+      { label: 'Total Profit', value: totalProfitPercent, format: 'percent' as const },
+      { label: 'Monthly Profit', value: monthlyProfitPercent, format: 'percent' as const },
+      { label: 'Max Drawdown', value: maxDDPercent, format: 'percent' as const },
       { label: 'Sharpe Ratio', value: portfolioSharpe, format: 'ratio' as const },
       { label: 'Calmar Ratio', value: calmarRatio, format: 'ratio' as const },
     ]
