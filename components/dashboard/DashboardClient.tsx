@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { StatsPanel } from './StatsPanel'
 import { EquityCurve } from '../charts/EquityCurve'
 import { StrategyTable } from './StrategyTable'
+import { DateRangePicker, type DateRange, type QuickSelectPeriod } from './DateRangePicker'
 import type { StrategyData } from '@/lib/data/loader'
 import type { ProfitCurvePoint } from '@/lib/calculators/statistics'
 import {
@@ -23,7 +24,36 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
     new Set(strategies.map((s) => String(s.magicNumber)))
   )
 
-  // Calculate portfolio data based on selected strategies
+  // Find min and max dates from all strategies
+  const { minDate, maxDate } = useMemo(() => {
+    let min = ''
+    let max = ''
+
+    for (const strategy of strategies) {
+      for (const point of strategy.profitCurve) {
+        if (!min || point.date < min) min = point.date
+        if (!max || point.date > max) max = point.date
+      }
+    }
+
+    return { minDate: min, maxDate: max }
+  }, [strategies])
+
+  // Date range state (initially set to MAX - full range)
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: minDate,
+    endDate: maxDate,
+  })
+  const [activePeriod, setActivePeriod] = useState<QuickSelectPeriod | null>('MAX')
+
+  // Handle date range change
+  const handleDateRangeChange = (newRange: DateRange, period?: QuickSelectPeriod) => {
+    setDateRange(newRange)
+    // Set active period if provided (from quick select), otherwise clear it (manual date entry)
+    setActivePeriod(period || null)
+  }
+
+  // Calculate portfolio data based on selected strategies AND date range
   const portfolioData = useMemo(() => {
     const selected = strategies.filter((s) =>
       selectedIds.has(String(s.magicNumber))
@@ -33,12 +63,13 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       return {
         stats: [
           { label: 'Total Strategies', value: 0, format: 'number' as const },
-          { label: 'Total Profit', value: 0, format: 'currency' as const },
-          { label: 'Max Drawdown', value: 0, format: 'currency' as const },
+          { label: 'Total Profit %', value: 0, format: 'percent' as const },
+          { label: 'Max Drawdown %', value: 0, format: 'percent' as const },
           { label: 'Sharpe Ratio', value: 0, format: 'ratio' as const },
           { label: 'Calmar Ratio', value: 0, format: 'ratio' as const },
         ],
         profitCurve: [],
+        normalizedProfitCurve: [],
         forwardTestStartDate: undefined,
       }
     }
@@ -89,62 +120,121 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
 
     // Step 3: Calculate drawdowns on portfolio curve
     let maxProfit = 0
-    let maxDrawdown = 0
+    let maxDrawdownDollars = 0
     for (const point of portfolioEquityCurve) {
       if (point.profit > maxProfit) {
         maxProfit = point.profit
       }
       point.drawdown = maxProfit - point.profit
-      if (point.drawdown > maxDrawdown) {
-        maxDrawdown = point.drawdown
+      if (point.drawdown > maxDrawdownDollars) {
+        maxDrawdownDollars = point.drawdown
       }
     }
 
-    // Step 4: Calculate Total Profit (sum of each strategy's final profit)
-    const totalProfit = selected.reduce((sum, strategy) => {
-      const finalProfit = strategy.profitCurve.length > 0
-        ? strategy.profitCurve[strategy.profitCurve.length - 1].profit
-        : 0
-      return sum + finalProfit
-    }, 0)
+    // Step 4: Calculate initial capital based on max DD = 20% rule
+    // If max DD = 20% of capital, then: capital = max DD / 0.20
+    const MAX_DD_PERCENT = 20
+    const realInitialCapital = maxDrawdownDollars > 0 ? maxDrawdownDollars / (MAX_DD_PERCENT / 100) : 1000 * selected.length
 
-    // Step 5: Calculate metrics
-    if (portfolioEquityCurve.length < 2) {
+    // Step 5: Filter by date range
+    const filteredCurve = portfolioEquityCurve.filter(
+      (p) => p.date >= dateRange.startDate && p.date <= dateRange.endDate
+    )
+
+    if (filteredCurve.length === 0) {
       return {
         stats: [
           { label: 'Total Strategies', value: selected.length, format: 'number' as const },
-          { label: 'Total Profit', value: totalProfit, format: 'currency' as const },
-          { label: 'Max Drawdown', value: maxDrawdown, format: 'currency' as const },
+          { label: 'Total Profit %', value: 0, format: 'percent' as const },
+          { label: 'Max Drawdown %', value: 0, format: 'percent' as const },
           { label: 'Sharpe Ratio', value: 0, format: 'ratio' as const },
           { label: 'Calmar Ratio', value: 0, format: 'ratio' as const },
         ],
-        profitCurve: portfolioEquityCurve,
+        profitCurve: [],
+        normalizedProfitCurve: [],
         forwardTestStartDate: undefined,
       }
     }
 
-    // Calculate time period
-    const firstDate = new Date(portfolioEquityCurve[0].date)
-    const lastDate = new Date(portfolioEquityCurve[portfolioEquityCurve.length - 1].date)
+    // Step 6: Calculate percentage metrics for filtered period based on real capital
+    const startProfit = filteredCurve[0].profit
+    const endProfit = filteredCurve[filteredCurve.length - 1].profit
+    const startEquity = realInitialCapital + startProfit
+    const endEquity = realInitialCapital + endProfit
+
+    // Total Profit % = (end equity - start equity) / start equity * 100
+    const totalProfitPercent = ((endEquity - startEquity) / startEquity) * 100
+
+    // Recalculate drawdown for filtered period (from peak in THIS period)
+    let peak = startEquity
+    let maxDD = 0
+    let maxDDPercent = 0
+
+    // Create array to store drawdown for each point in filtered period
+    const filteredDrawdowns: number[] = []
+
+    for (const point of filteredCurve) {
+      const equity = realInitialCapital + point.profit
+      if (equity > peak) peak = equity
+      const dd = peak - equity
+
+      filteredDrawdowns.push(dd)
+
+      if (dd > maxDD) maxDD = dd
+    }
+
+    // Calculate max DD % relative to start equity (not peak)
+    // This gives us absolute percentage points of drawdown
+    maxDDPercent = (maxDD / startEquity) * 100
+
+    // Step 7: Normalize curve to start at 0% (for chart display)
+    // Convert all values to percentage terms based on start equity
+    const normalizedCurve = filteredCurve.map((point, index) => {
+      const equity = realInitialCapital + point.profit
+      const normalizedPercent = ((equity - startEquity) / startEquity) * 100
+      // Use drawdown calculated for THIS filtered period, relative to start equity
+      const drawdownPercent = (filteredDrawdowns[index] / startEquity) * 100
+      return {
+        date: point.date,
+        profit: normalizedPercent,
+        drawdown: drawdownPercent,
+      }
+    })
+
+    // Step 8: Calculate metrics
+    if (filteredCurve.length < 2) {
+      return {
+        stats: [
+          { label: 'Total Strategies', value: selected.length, format: 'number' as const },
+          { label: 'Total Profit %', value: totalProfitPercent, format: 'percent' as const },
+          { label: 'Max Drawdown %', value: maxDDPercent, format: 'percent' as const },
+          { label: 'Sharpe Ratio', value: 0, format: 'ratio' as const },
+          { label: 'Calmar Ratio', value: 0, format: 'ratio' as const },
+        ],
+        profitCurve: filteredCurve,
+        normalizedProfitCurve: normalizedCurve,
+        forwardTestStartDate: undefined,
+      }
+    }
+
+    // Calculate time period for filtered range
+    const firstDate = new Date(filteredCurve[0].date)
+    const lastDate = new Date(filteredCurve[filteredCurve.length - 1].date)
     const yearsElapsed = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
 
-    // Initial capital = $1000 per strategy (each normalized to $1000 max DD)
-    const initialCapital = 1000 * selected.length
-
-    // Annualized return (CAGR)
+    // Annualized return (CAGR) based on percentage gain
     const annualizedReturn = yearsElapsed > 0
-      ? (Math.pow((initialCapital + totalProfit) / initialCapital, 1 / yearsElapsed) - 1) * 100
-      : 0
+      ? (Math.pow(1 + totalProfitPercent / 100, 1 / yearsElapsed) - 1) * 100
+      : totalProfitPercent
 
     // Calmar Ratio = Annualized Return % / Max Drawdown %
-    const maxDrawdownPercent = (maxDrawdown / initialCapital) * 100
-    const calmarRatio = maxDrawdownPercent > 0 ? annualizedReturn / maxDrawdownPercent : 0
+    const calmarRatio = maxDDPercent > 0 ? annualizedReturn / maxDDPercent : 0
 
-    // Calculate Sharpe Ratio from daily returns of portfolio equity
+    // Calculate Sharpe Ratio from daily returns of filtered portfolio equity
     const dailyReturns: number[] = []
-    for (let i = 1; i < portfolioEquityCurve.length; i++) {
-      const prevEquity = initialCapital + portfolioEquityCurve[i - 1].profit
-      const currEquity = initialCapital + portfolioEquityCurve[i].profit
+    for (let i = 1; i < filteredCurve.length; i++) {
+      const prevEquity = realInitialCapital + filteredCurve[i - 1].profit
+      const currEquity = realInitialCapital + filteredCurve[i].profit
       const dailyReturn = (currEquity - prevEquity) / prevEquity
       dailyReturns.push(dailyReturn)
     }
@@ -156,8 +246,8 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
 
     const stats = [
       { label: 'Total Strategies', value: selected.length, format: 'number' as const },
-      { label: 'Total Profit', value: totalProfit, format: 'currency' as const },
-      { label: 'Max Drawdown', value: maxDrawdown, format: 'currency' as const },
+      { label: 'Total Profit %', value: totalProfitPercent, format: 'percent' as const },
+      { label: 'Max Drawdown %', value: maxDDPercent, format: 'percent' as const },
       { label: 'Sharpe Ratio', value: portfolioSharpe, format: 'ratio' as const },
       { label: 'Calmar Ratio', value: calmarRatio, format: 'ratio' as const },
     ]
@@ -170,10 +260,11 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
 
     return {
       stats,
-      profitCurve: portfolioEquityCurve,
+      profitCurve: filteredCurve,
+      normalizedProfitCurve: normalizedCurve,
       forwardTestStartDate,
     }
-  }, [strategies, selectedIds])
+  }, [strategies, selectedIds, dateRange])
 
   // Handle strategy selection change
   const handleSelectionChange = (selected: string[]) => {
@@ -204,11 +295,19 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
         </p>
       </div>
 
+      <DateRangePicker
+        dateRange={dateRange}
+        onDateRangeChange={handleDateRangeChange}
+        minDate={minDate}
+        maxDate={maxDate}
+        activePeriod={activePeriod}
+      />
+
       <StatsPanel stats={portfolioData.stats} />
 
       <div className="card">
         <h2 className="font-display text-xl font-semibold mb-4 text-deus-gray">
-          Portfolio Profit Curve
+          Portfolio Profit Curve (%)
           {portfolioData.forwardTestStartDate && (
             <span className="ml-3 text-sm font-normal text-text-secondary">
               (Includes forward test data from {portfolioData.forwardTestStartDate})
@@ -216,13 +315,14 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
           )}
         </h2>
         <EquityCurve
-          data={portfolioData.profitCurve.map((p) => ({
+          data={portfolioData.normalizedProfitCurve.map((p) => ({
             date: p.date,
-            equity: p.profit, // Use profit as equity for the chart
-            drawdown: -p.drawdown, // Negative so it displays below $0 axis
+            equity: p.profit, // Already in percentage terms, normalized to 0%
+            drawdown: -p.drawdown, // Negative so it displays below axis
           }))}
           showDrawdown={true}
           forwardTestStartDate={portfolioData.forwardTestStartDate}
+          isPercentage={true}
         />
       </div>
 

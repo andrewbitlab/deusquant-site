@@ -21,21 +21,23 @@ interface EquityCurveProps {
   }>
   showDrawdown?: boolean
   forwardTestStartDate?: string // ISO date string where forward test begins
+  isPercentage?: boolean // If true, format as percentage instead of currency
 }
 
 export function EquityCurve({
   data,
   showDrawdown = true,
-  forwardTestStartDate
+  forwardTestStartDate,
+  isPercentage = false
 }: EquityCurveProps) {
   // Calculate dynamic Y-axis domain based on actual data
   const maxEquity = Math.max(...data.map(d => d.equity))
   const minDrawdown = Math.min(...data.map(d => d.drawdown || 0))
 
-  // Round down to nearest $2500 for better visibility
-  const yAxisMin = Math.floor(minDrawdown / 2500) * 2500
-  // Add some padding to max equity (10%)
-  const yAxisMax = Math.ceil(maxEquity * 1.1 / 2500) * 2500
+  // Round to appropriate increments based on format
+  const increment = isPercentage ? 10 : 2500
+  const yAxisMin = Math.floor(minDrawdown / increment) * increment
+  const yAxisMax = Math.ceil(maxEquity * 1.1 / increment) * increment
 
   return (
     <div className="w-full h-[400px]">
@@ -63,7 +65,11 @@ export function EquityCurve({
           <YAxis
             stroke="#a0a3a9"
             tick={{ fill: '#7a7d84', fontSize: 12 }}
-            tickFormatter={(value) => `$${Math.round(value).toLocaleString('en-US')}`}
+            tickFormatter={(value) =>
+              isPercentage
+                ? `${value.toFixed(0)}%`
+                : `$${Math.round(value).toLocaleString('en-US')}`
+            }
             domain={[yAxisMin, yAxisMax]}
           />
 
@@ -75,8 +81,13 @@ export function EquityCurve({
               fontSize: 12,
             }}
             formatter={(value: number, name: string) => {
-              if (name === 'equity') return [`$${Math.round(value).toLocaleString('en-US')}`, 'Profit']
-              if (name === 'drawdown') return [`$${Math.round(Math.abs(value)).toLocaleString('en-US')}`, 'Drawdown']
+              if (isPercentage) {
+                if (name === 'equity') return [`${value.toFixed(2)}%`, 'Profit']
+                if (name === 'drawdown') return [`${Math.abs(value).toFixed(2)}%`, 'Drawdown']
+              } else {
+                if (name === 'equity') return [`$${Math.round(value).toLocaleString('en-US')}`, 'Profit']
+                if (name === 'drawdown') return [`$${Math.round(Math.abs(value)).toLocaleString('en-US')}`, 'Drawdown']
+              }
               return [value, name]
             }}
           />

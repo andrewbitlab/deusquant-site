@@ -19,7 +19,9 @@ export function StatsPanel({ stats }: StatsPanelProps) {
       case 'currency':
         return `$${Math.round(stat.value).toLocaleString('en-US')}`
       case 'percent':
-        return `${stat.value.toFixed(2)}%`
+        // Add + sign for positive percentages (except Max Drawdown which is always shown as positive)
+        const sign = stat.value > 0 && !stat.label.includes('Drawdown') ? '+' : ''
+        return `${sign}${stat.value.toFixed(2)}%`
       case 'ratio':
         return stat.value.toFixed(2)
       case 'number':
@@ -29,12 +31,21 @@ export function StatsPanel({ stats }: StatsPanelProps) {
     }
   }
 
+  const getValueColor = (stat: Stat): string => {
+    // Color coding for Total Profit %
+    if (stat.label.includes('Total Profit') && typeof stat.value === 'number') {
+      if (stat.value > 0) return 'text-accent-profit'
+      if (stat.value < 0) return 'text-accent-loss'
+    }
+    return 'text-text-primary'
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       {stats.map((stat, i) => (
         <div key={i} className="card">
           <div className="stat-label">{stat.label}</div>
-          <div className="stat-value">{formatValue(stat)}</div>
+          <div className={`stat-value ${getValueColor(stat)}`}>{formatValue(stat)}</div>
           {stat.change !== undefined && (
             <div
               className={
