@@ -32,8 +32,8 @@ export function StatsPanel({ stats }: StatsPanelProps) {
   }
 
   const getValueColor = (stat: Stat): string => {
-    // Color coding for Total Profit %
-    if (stat.label.includes('Total Profit') && typeof stat.value === 'number') {
+    // Color coding for profit percentages
+    if ((stat.label.includes('Total Profit') || stat.label.includes('Monthly Profit')) && typeof stat.value === 'number') {
       if (stat.value > 0) return 'text-accent-profit'
       if (stat.value < 0) return 'text-accent-loss'
     }
@@ -41,10 +41,10 @@ export function StatsPanel({ stats }: StatsPanelProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
       {stats.map((stat, i) => (
-        <div key={i} className="card">
-          <div className="stat-label">{stat.label}</div>
+        <div key={i} className="card flex flex-col">
+          <div className="stat-label h-12 flex items-start">{stat.label}</div>
           <div className={`stat-value ${getValueColor(stat)}`}>{formatValue(stat)}</div>
           {stat.change !== undefined && (
             <div

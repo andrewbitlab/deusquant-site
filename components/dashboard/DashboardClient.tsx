@@ -64,6 +64,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
         stats: [
           { label: 'Total Strategies', value: 0, format: 'number' as const },
           { label: 'Total Profit %', value: 0, format: 'percent' as const },
+          { label: 'Monthly Profit %', value: 0, format: 'percent' as const },
           { label: 'Max Drawdown %', value: 0, format: 'percent' as const },
           { label: 'Sharpe Ratio', value: 0, format: 'ratio' as const },
           { label: 'Calmar Ratio', value: 0, format: 'ratio' as const },
@@ -146,6 +147,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
         stats: [
           { label: 'Total Strategies', value: selected.length, format: 'number' as const },
           { label: 'Total Profit %', value: 0, format: 'percent' as const },
+          { label: 'Monthly Profit %', value: 0, format: 'percent' as const },
           { label: 'Max Drawdown %', value: 0, format: 'percent' as const },
           { label: 'Sharpe Ratio', value: 0, format: 'ratio' as const },
           { label: 'Calmar Ratio', value: 0, format: 'ratio' as const },
@@ -207,6 +209,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
         stats: [
           { label: 'Total Strategies', value: selected.length, format: 'number' as const },
           { label: 'Total Profit %', value: totalProfitPercent, format: 'percent' as const },
+          { label: 'Monthly Profit %', value: 0, format: 'percent' as const },
           { label: 'Max Drawdown %', value: maxDDPercent, format: 'percent' as const },
           { label: 'Sharpe Ratio', value: 0, format: 'ratio' as const },
           { label: 'Calmar Ratio', value: 0, format: 'ratio' as const },
@@ -221,11 +224,15 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
     const firstDate = new Date(filteredCurve[0].date)
     const lastDate = new Date(filteredCurve[filteredCurve.length - 1].date)
     const yearsElapsed = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+    const monthsElapsed = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44) // Average days per month
 
     // Annualized return (CAGR) based on percentage gain
     const annualizedReturn = yearsElapsed > 0
       ? (Math.pow(1 + totalProfitPercent / 100, 1 / yearsElapsed) - 1) * 100
       : totalProfitPercent
+
+    // Monthly Profit % = Total Profit % divided by number of months in period
+    const monthlyProfitPercent = monthsElapsed > 0 ? totalProfitPercent / monthsElapsed : totalProfitPercent
 
     // Calmar Ratio = Annualized Return % / Max Drawdown %
     const calmarRatio = maxDDPercent > 0 ? annualizedReturn / maxDDPercent : 0
@@ -247,6 +254,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
     const stats = [
       { label: 'Total Strategies', value: selected.length, format: 'number' as const },
       { label: 'Total Profit %', value: totalProfitPercent, format: 'percent' as const },
+      { label: 'Monthly Profit %', value: monthlyProfitPercent, format: 'percent' as const },
       { label: 'Max Drawdown %', value: maxDDPercent, format: 'percent' as const },
       { label: 'Sharpe Ratio', value: portfolioSharpe, format: 'ratio' as const },
       { label: 'Calmar Ratio', value: calmarRatio, format: 'ratio' as const },
