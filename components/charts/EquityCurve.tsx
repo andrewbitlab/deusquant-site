@@ -100,8 +100,8 @@ export function EquityCurve({
               strokeWidth={2}
               strokeDasharray="5 5"
               label={{
-                value: 'Forward Test (Out of Sample)',
-                position: 'insideTopRight',
+                value: 'Live Data',
+                position: 'insideTopLeft',
                 fill: '#10b981',
                 fontSize: 12,
                 fontWeight: 600,

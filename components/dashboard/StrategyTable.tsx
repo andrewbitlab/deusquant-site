@@ -83,7 +83,7 @@ export function StrategyTable({
                   onChange={toggleSelectAll}
                 />
               </th>
-              <th>Magic #</th>
+              <th>ID</th>
               <th>Name</th>
               <th>Symbol</th>
               <th>Total Profit</th>

@@ -93,7 +93,7 @@ export function DateRangePicker({
         {/* Date Inputs */}
         <div className="flex items-center gap-4">
           <span className="text-sm font-display font-semibold text-text-primary">
-            Wybierz okres od
+            Date range
           </span>
 
           <div className="relative">
@@ -108,7 +108,7 @@ export function DateRangePicker({
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
           </div>
 
-          <span className="text-sm text-text-muted">do</span>
+          <span className="text-sm text-text-muted">-</span>
 
           <div className="relative">
             <input
