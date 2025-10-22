@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: 'https://deusquant.com/images/logo.png',
+        url: 'https://deusquant.com/images/logo-sun-white.jpg',
         width: 800,
         height: 600,
         alt: 'Deus Quant',
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Deus Quant',
     description: 'Quantitative Trading & Portfolio Management',
-    images: ['https://deusquant.com/images/logo.png'],
+    images: ['https://deusquant.com/images/logo-sun-white.jpg'],
   },
   alternates: {
     canonical: 'https://deusquant.com',
@@ -72,7 +72,7 @@ export default function RootLayout({
               '@type': 'Organization',
               name: 'Deus Quant',
               url: 'https://deusquant.com/',
-              logo: 'https://deusquant.com/images/logo.png',
+              logo: 'https://deusquant.com/images/logo-sun-white.jpg',
               sameAs: [
                 'https://github.com/deusquant',
                 'https://www.linkedin.com/company/deus-quant',
