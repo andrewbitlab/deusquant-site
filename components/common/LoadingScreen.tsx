@@ -1,4 +1,5 @@
 import { Logo } from '@/components/brand/Logo'
+import Image from 'next/image'
 
 export function LoadingScreen() {
   return (
@@ -9,7 +10,7 @@ export function LoadingScreen() {
           <Logo />
           <div className="flex items-center gap-6">
             <div className="text-sm">
-              <span className="text-text-muted">Loading Portfolio...</span>
+              <span className="text-text-muted"></span>
             </div>
           </div>
         </div>
@@ -19,9 +20,15 @@ export function LoadingScreen() {
       <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 4rem)' }}>
         <div className="flex flex-col items-center gap-4">
           <div className="relative w-16 h-16">
-            {/* Spinning loader */}
-            <div className="absolute inset-0 border-4 border-border-light rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-accent-info border-t-transparent rounded-full animate-spin"></div>
+            {/* Spinning logo sun */}
+            <Image
+              src="/images/logo-sun.png"
+              alt="Loading"
+              width={64}
+              height={64}
+              className="animate-spin"
+              style={{ animationDuration: '2s' }}
+            />
           </div>
           <p className="text-text-secondary text-sm">Loading portfolio data...</p>
         </div>
