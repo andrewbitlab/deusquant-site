@@ -22,7 +22,7 @@ export function LoadingScreen() {
           <div className="relative w-16 h-16">
             {/* Spinning logo sun */}
             <Image
-              src="/images/logo-sun.png"
+              src="/images/logo-sun-small.png"
               alt="Loading"
               width={64}
               height={64}
