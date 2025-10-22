@@ -60,6 +60,13 @@ export function EquityCurve({
             dataKey="date"
             stroke="#a0a3a9"
             tick={{ fill: '#7a7d84', fontSize: 12 }}
+            tickFormatter={(value) => {
+              // Format as MM.YYYY (Polish format without day)
+              const date = new Date(value)
+              const month = String(date.getMonth() + 1).padStart(2, '0')
+              const year = date.getFullYear()
+              return `${month}.${year}`
+            }}
           />
 
           <YAxis
@@ -79,6 +86,14 @@ export function EquityCurve({
               border: '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: 12,
+            }}
+            labelFormatter={(label) => {
+              // Format date as DD.MM.YYYY (Polish format with day)
+              const date = new Date(label)
+              const day = String(date.getDate()).padStart(2, '0')
+              const month = String(date.getMonth() + 1).padStart(2, '0')
+              const year = date.getFullYear()
+              return `${day}.${month}.${year}`
             }}
             formatter={(value: number, name: string) => {
               if (isPercentage) {

@@ -5,29 +5,30 @@ import { RefreshCw } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-export function DashboardHeader() {
+interface DashboardHeaderProps {
+  lastTransactionDate?: string // ISO date string YYYY-MM-DD
+}
+
+export function DashboardHeader({ lastTransactionDate }: DashboardHeaderProps) {
   const router = useRouter()
-  const [currentTime, setCurrentTime] = useState<string>('')
+  const [displayDate, setDisplayDate] = useState<string>('')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
-    // Only render time on client to avoid hydration mismatch
-    updateTime()
-  }, [])
-
-  const updateTime = () => {
-    setCurrentTime(
-      new Date().toLocaleString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      })
-    )
-  }
+    // Format the last transaction date with time as end of day
+    if (lastTransactionDate) {
+      const date = new Date(lastTransactionDate + 'T23:59:59')
+      // Polish format: DD.MM.YYYY HH:mm:ss
+      const day = String(date.getDate()).padStart(2, '0')
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const year = date.getFullYear()
+      const hours = String(date.getHours()).padStart(2, '0')
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      const seconds = String(date.getSeconds()).padStart(2, '0')
+      setDisplayDate(`${day}.${month}.${year} ${hours}:${minutes}:${seconds}`)
+    }
+  }, [lastTransactionDate])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -42,10 +43,7 @@ export function DashboardHeader() {
         throw new Error(result.error || 'Failed to refresh data')
       }
 
-      // Update timestamp
-      updateTime()
-
-      // Refresh the page data
+      // Refresh the page data (this will re-fetch strategies and update lastTransactionDate)
       router.refresh()
 
       // Show success message
@@ -79,7 +77,7 @@ export function DashboardHeader() {
             <div className="text-sm">
               <span className="text-text-muted">Last Update:</span>
               <span className="ml-2 font-mono text-text-primary">
-                {currentTime || '—'}
+                {displayDate || '—'}
               </span>
             </div>
 
