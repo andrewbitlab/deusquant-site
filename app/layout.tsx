@@ -62,6 +62,48 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${montserrat.variable} ${jetbrainsMono.variable}`}>
       <body className="font-body antialiased bg-bg-primary text-text-primary">
+        {/* Suppress known library warnings in development - must be first! */}
+        {process.env.NODE_ENV === 'development' && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function() {
+                  const originalError = console.error;
+                  const originalWarn = console.warn;
+
+                  console.error = function(...args) {
+                    const message = args[0]?.toString() || '';
+
+                    // Suppress Recharts defaultProps warnings (library issue, not our code)
+                    if (message.includes('Support for defaultProps will be removed') &&
+                        (message.includes('XAxis') || message.includes('YAxis') || message.includes('ReferenceLine'))) {
+                      return;
+                    }
+
+                    // Suppress browser extension warnings
+                    if (message.includes('Extra attributes from the server') && message.includes('data-atm-ext-installed')) {
+                      return;
+                    }
+
+                    originalError.apply(console, args);
+                  };
+
+                  console.warn = function(...args) {
+                    const message = args[0]?.toString() || '';
+
+                    // Suppress Next.js Image warnings about aspect ratio when we already handle it
+                    if (message.includes('has either width or height modified') && message.includes('logo-name.png')) {
+                      return;
+                    }
+
+                    originalWarn.apply(console, args);
+                  };
+                })();
+              `,
+            }}
+          />
+        )}
+
         {/* JSON-LD: Organization Schema */}
         <Script
           id="organization-schema"

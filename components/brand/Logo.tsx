@@ -20,6 +20,7 @@ export function Logo({ className, showText = true }: LogoProps) {
           width={384}
           height={48}
           className="h-full w-auto object-contain m-0 p-0"
+          style={{ width: 'auto' }}
           priority
         />
       </div>
