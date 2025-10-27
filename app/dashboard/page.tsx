@@ -2,10 +2,12 @@ import { DashboardHeader } from '@/components/dashboard/Header'
 import { DashboardClient } from '@/components/dashboard/DashboardClient'
 import { getAllStrategies } from '@/lib/data/loader'
 
-export const dynamic = 'force-dynamic'
+// Revalidate every 1 hour (3600 seconds) - ISR with cache
+export const revalidate = 3600
 
 export default async function DashboardPage() {
   // Load all strategies from data directory
+  // This will be cached and revalidated every hour
   const strategies = await getAllStrategies()
 
   // Find the latest transaction date from all strategies

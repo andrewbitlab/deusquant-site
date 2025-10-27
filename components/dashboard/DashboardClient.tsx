@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, memo } from 'react'
 import { StatsPanel } from './StatsPanel'
 import { EquityCurve } from '../charts/EquityCurve'
 import { StrategyTable } from './StrategyTable'
@@ -18,7 +18,8 @@ interface DashboardClientProps {
   strategies: StrategyData[]
 }
 
-export function DashboardClient({ strategies }: DashboardClientProps) {
+// Memoized for performance - prevents unnecessary recalculations
+function DashboardClientComponent({ strategies }: DashboardClientProps) {
   // Track selected strategy IDs (initially all selected)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     new Set(strategies.map((s) => String(s.magicNumber)))
@@ -645,3 +646,5 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
     </div>
   )
 }
+
+export const DashboardClient = memo(DashboardClientComponent)

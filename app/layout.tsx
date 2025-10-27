@@ -3,22 +3,26 @@ import Script from 'next/script'
 import { Inter, Montserrat, JetBrains_Mono } from 'next/font/google'
 import '@/styles/globals.css'
 
+// Optimized font loading with preload
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-body',
   display: 'swap',
+  preload: true,
 })
 
 const montserrat = Montserrat({
   subsets: ['latin'],
   variable: '--font-display',
   display: 'swap',
+  preload: true,
 })
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   display: 'swap',
+  preload: false, // Less critical, optional loading
 })
 
 export const metadata: Metadata = {

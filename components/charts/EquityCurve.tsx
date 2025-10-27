@@ -14,6 +14,8 @@ import {
   Legend,
 } from 'recharts'
 
+// Note: Recharts is already optimized via optimizePackageImports in next.config.js
+
 interface EquityCurveProps {
   data: Array<{
     date: string
