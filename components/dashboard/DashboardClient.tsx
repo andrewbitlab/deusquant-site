@@ -55,6 +55,9 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
 
   // Calculate portfolio data based on selected strategies AND date range
   const portfolioData = useMemo(() => {
+    // Target max drawdown percentage (future: user configurable)
+    const TARGET_DD_PERCENT = 20
+
     const selected = strategies.filter((s) =>
       selectedIds.has(String(s.magicNumber))
     )
@@ -132,10 +135,26 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       }
     }
 
-    // Step 4: Calculate initial capital based on max DD = 20% rule
+    // Step 4: Calculate initial capital where max DD = TARGET_DD_PERCENT
     // If max DD = 20% of capital, then: capital = max DD / 0.20
-    const MAX_DD_PERCENT = 20
-    const realInitialCapital = maxDrawdownDollars > 0 ? maxDrawdownDollars / (MAX_DD_PERCENT / 100) : 1000 * selected.length
+    const realInitialCapital = maxDrawdownDollars > 0 ? maxDrawdownDollars / (TARGET_DD_PERCENT / 100) : 1000 * selected.length
+
+    // Step 4b: Calculate GLOBAL max DD % (for entire history) to determine scale factor
+    // This scale factor will be constant regardless of time range filter
+    let globalMaxDDPercent = 0
+    for (const point of portfolioEquityCurve) {
+      const currentEquity = realInitialCapital + point.profit
+      const drawdownDollars = point.drawdown
+      const peakProfit = point.profit + drawdownDollars
+      const peakEquity = realInitialCapital + peakProfit
+      const drawdownPercent = peakEquity > 0 ? (drawdownDollars / peakEquity) * 100 : 0
+      if (drawdownPercent > globalMaxDDPercent) {
+        globalMaxDDPercent = drawdownPercent
+      }
+    }
+
+    // Calculate CONSTANT scale factor based on entire history
+    const scaleFactor = globalMaxDDPercent > 0 ? TARGET_DD_PERCENT / globalMaxDDPercent : 1
 
     // Step 5: Filter by date range
     const filteredCurve = portfolioEquityCurve.filter(
@@ -158,7 +177,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       }
     }
 
-    // Step 6: Calculate percentage metrics for filtered period based on real capital
+    // Step 6: Calculate percentage metrics using GLOBAL drawdown
     const startProfit = filteredCurve[0].profit
     const endProfit = filteredCurve[filteredCurve.length - 1].profit
     const startEquity = realInitialCapital + startProfit
@@ -167,50 +186,53 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
     // Total Profit % = (end equity - start equity) / start equity * 100
     const totalProfitPercent = ((endEquity - startEquity) / startEquity) * 100
 
-    // Recalculate drawdown for filtered period (from peak in THIS period)
-    let peak = startEquity
-    let maxDD = 0
-    let maxDDPercent = 0
+    // Step 7: Calculate drawdown % and apply GLOBAL scale factor
+    let maxDDPercentInPeriod = 0  // Track max DD in this filtered period (for stats)
 
-    // Create array to store drawdown for each point in filtered period
-    const filteredDrawdowns: number[] = []
+    const normalizedCurve = filteredCurve.map((point) => {
+      const currentEquity = realInitialCapital + point.profit
+      const drawdownDollars = point.drawdown  // Global drawdown from line 132
 
-    for (const point of filteredCurve) {
-      const equity = realInitialCapital + point.profit
-      if (equity > peak) peak = equity
-      const dd = peak - equity
+      // Calculate peak equity for this point
+      // Since drawdown = peakProfit - currentProfit, then peakProfit = currentProfit + drawdown
+      const peakProfit = point.profit + drawdownDollars
+      const peakEquity = realInitialCapital + peakProfit
 
-      filteredDrawdowns.push(dd)
+      // Drawdown % = DD$ / Peak Equity × 100 (standard financial formula)
+      const drawdownPercent = peakEquity > 0
+        ? (drawdownDollars / peakEquity) * 100
+        : 0
 
-      if (dd > maxDD) maxDD = dd
-    }
+      // Apply GLOBAL scale factor (constant for all time ranges)
+      const scaledDrawdownPercent = drawdownPercent * scaleFactor
 
-    // Calculate max DD % relative to start equity (not peak)
-    // This gives us absolute percentage points of drawdown
-    maxDDPercent = (maxDD / startEquity) * 100
+      // Track maximum drawdown % in filtered period
+      if (scaledDrawdownPercent > maxDDPercentInPeriod) {
+        maxDDPercentInPeriod = scaledDrawdownPercent
+      }
 
-    // Step 7: Normalize curve to start at 0% (for chart display)
-    // Convert all values to percentage terms based on start equity
-    const normalizedCurve = filteredCurve.map((point, index) => {
-      const equity = realInitialCapital + point.profit
-      const normalizedPercent = ((equity - startEquity) / startEquity) * 100
-      // Use drawdown calculated for THIS filtered period, relative to start equity
-      const drawdownPercent = (filteredDrawdowns[index] / startEquity) * 100
+      // Normalize profit to start at 0% for chart display and apply scale factor
+      const normalizedPercent = ((currentEquity - startEquity) / startEquity) * 100
+      const scaledNormalizedPercent = normalizedPercent * scaleFactor
+
       return {
         date: point.date,
-        profit: normalizedPercent,
-        drawdown: drawdownPercent,
+        profit: scaledNormalizedPercent,
+        drawdown: scaledDrawdownPercent,
       }
     })
 
-    // Step 8: Calculate metrics
+    // Step 8: Calculate scaled total profit
+    const scaledTotalProfitPercent = totalProfitPercent * scaleFactor
+
+    // Step 9: Calculate metrics using SCALED percentages
     if (filteredCurve.length < 2) {
       return {
         stats: [
           { label: 'Total Strategies', value: selected.length, format: 'number' as const },
-          { label: 'Total Profit', value: totalProfitPercent, format: 'percent' as const },
+          { label: 'Total Profit', value: scaledTotalProfitPercent, format: 'percent' as const },
           { label: 'Monthly Profit', value: 0, format: 'percent' as const },
-          { label: 'Max Drawdown', value: maxDDPercent, format: 'percent' as const },
+          { label: 'Max Drawdown', value: maxDDPercentInPeriod, format: 'percent' as const },
           { label: 'Sharpe Ratio', value: 0, format: 'ratio' as const },
           { label: 'Calmar Ratio', value: 0, format: 'ratio' as const },
         ],
@@ -226,16 +248,16 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
     const yearsElapsed = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
     const monthsElapsed = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44) // Average days per month
 
-    // Annualized return (CAGR) based on percentage gain
+    // Annualized return (CAGR) based on SCALED percentage gain
     const annualizedReturn = yearsElapsed > 0
-      ? (Math.pow(1 + totalProfitPercent / 100, 1 / yearsElapsed) - 1) * 100
-      : totalProfitPercent
+      ? (Math.pow(1 + scaledTotalProfitPercent / 100, 1 / yearsElapsed) - 1) * 100
+      : scaledTotalProfitPercent
 
     // Monthly Profit % = Total Profit % divided by number of months in period
-    const monthlyProfitPercent = monthsElapsed > 0 ? totalProfitPercent / monthsElapsed : totalProfitPercent
+    const monthlyProfitPercent = monthsElapsed > 0 ? scaledTotalProfitPercent / monthsElapsed : scaledTotalProfitPercent
 
     // Calmar Ratio = Annualized Return % / Max Drawdown %
-    const calmarRatio = maxDDPercent > 0 ? annualizedReturn / maxDDPercent : 0
+    const calmarRatio = maxDDPercentInPeriod > 0 ? annualizedReturn / maxDDPercentInPeriod : 0
 
     // Calculate Sharpe Ratio from daily returns of filtered portfolio equity
     const dailyReturns: number[] = []
@@ -253,9 +275,9 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
 
     const stats = [
       { label: 'Total Strategies', value: selected.length, format: 'number' as const },
-      { label: 'Total Profit', value: totalProfitPercent, format: 'percent' as const },
+      { label: 'Total Profit', value: scaledTotalProfitPercent, format: 'percent' as const },
       { label: 'Monthly Profit', value: monthlyProfitPercent, format: 'percent' as const },
-      { label: 'Max Drawdown', value: maxDDPercent, format: 'percent' as const },
+      { label: 'Max Drawdown', value: maxDDPercentInPeriod, format: 'percent' as const },
       { label: 'Sharpe Ratio', value: portfolioSharpe, format: 'ratio' as const },
       { label: 'Calmar Ratio', value: calmarRatio, format: 'ratio' as const },
     ]
