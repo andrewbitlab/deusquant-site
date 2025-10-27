@@ -272,8 +272,15 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
     const yearsElapsed = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
     const monthsElapsed = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44) // Average days per month
 
-    // Annualized return (CAGR) based on SCALED percentage gain
+    // NOTE: Since strategies use fixed position sizing (no compounding/reinvestment),
+    // we use Simple Annualized Return instead of CAGR
+    // Simple Annualized Return = Total Return % / Years Elapsed
     const annualizedReturn = yearsElapsed > 0
+      ? scaledTotalProfitPercent / yearsElapsed
+      : scaledTotalProfitPercent
+
+    // For reference, CAGR (if there was compounding) would be:
+    const compoundCAGR = yearsElapsed > 0
       ? (Math.pow(1 + scaledTotalProfitPercent / 100, 1 / yearsElapsed) - 1) * 100
       : scaledTotalProfitPercent
 
@@ -327,6 +334,9 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
         maxDDDetails,
         globalMaxDDPercent,
         scaleFactor,
+        annualizedReturn,
+        compoundCAGR,
+        maxDDPercentInPeriod,
       }
     }
   }, [strategies, selectedIds, dateRange])
@@ -358,7 +368,16 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       console.log('')
       console.log('🔢 Global Max DD Percent (unscaled):', d.globalMaxDDPercent.toFixed(2) + '%')
       console.log('⚖️ Scale Factor:', d.scaleFactor.toFixed(4))
-      console.log('✅ Scaled Max DD Percent:', (d.globalMaxDDPercent * d.scaleFactor).toFixed(2) + '%', '(should equal target ' + d.TARGET_DD_PERCENT + '%)')
+      console.log('✅ Scaled Global Max DD:', (d.globalMaxDDPercent * d.scaleFactor).toFixed(2) + '%', '(should equal target ' + d.TARGET_DD_PERCENT + '%)')
+      console.log('')
+      console.log('📊 Max DD in Selected Period:', d.maxDDPercentInPeriod.toFixed(2) + '%')
+      console.log('')
+      console.log('💡 Return Metrics (Fixed Position Sizing - No Compounding):')
+      console.log('  📈 Simple Annualized Return:', d.annualizedReturn.toFixed(2) + '%', '(used for Calmar)')
+      console.log('  🔄 Compound CAGR (hypothetical):', d.compoundCAGR.toFixed(2) + '%', '(if reinvesting)')
+      console.log('')
+      console.log('🧮 Calmar Calculation:', d.annualizedReturn.toFixed(2) + '% / ' + d.maxDDPercentInPeriod.toFixed(2) + '% = ' + (d.annualizedReturn / d.maxDDPercentInPeriod).toFixed(2))
+      console.log('✅ Calmar Ratio:', portfolioData.stats[5].value.toFixed(2))
       console.groupEnd()
     }
   }, [portfolioData, selectedIds, dateRange])
