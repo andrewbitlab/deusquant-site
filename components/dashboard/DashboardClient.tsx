@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { StatsPanel } from './StatsPanel'
 import { EquityCurve } from '../charts/EquityCurve'
 import { StrategyTable } from './StrategyTable'
@@ -23,6 +23,9 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     new Set(strategies.map((s) => String(s.magicNumber)))
   )
+
+  // Track if we've already logged for this calculation to avoid duplicate logs
+  const lastLoggedKey = useRef<string>('')
 
   // Find min and max dates from all strategies
   const { minDate, maxDate } = useMemo(() => {
@@ -142,6 +145,17 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
     // Step 4b: Calculate GLOBAL max DD % (for entire history) to determine scale factor
     // This scale factor will be constant regardless of time range filter
     let globalMaxDDPercent = 0
+    let maxDDDate = ''
+    let maxDDDetails = {
+      date: '',
+      profit: 0,
+      drawdownDollars: 0,
+      currentEquity: 0,
+      peakEquity: 0,
+      peakProfit: 0,
+      drawdownPercent: 0,
+    }
+
     for (const point of portfolioEquityCurve) {
       const currentEquity = realInitialCapital + point.profit
       const drawdownDollars = point.drawdown
@@ -150,6 +164,16 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       const drawdownPercent = peakEquity > 0 ? (drawdownDollars / peakEquity) * 100 : 0
       if (drawdownPercent > globalMaxDDPercent) {
         globalMaxDDPercent = drawdownPercent
+        maxDDDate = point.date
+        maxDDDetails = {
+          date: point.date,
+          profit: point.profit,
+          drawdownDollars,
+          currentEquity,
+          peakEquity,
+          peakProfit,
+          drawdownPercent,
+        }
       }
     }
 
@@ -293,8 +317,51 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       profitCurve: filteredCurve,
       normalizedProfitCurve: normalizedCurve,
       forwardTestStartDate,
+      // Debug data for logging
+      debugData: {
+        TARGET_DD_PERCENT,
+        selectedCount: selected.length,
+        maxDrawdownDollars,
+        realInitialCapital,
+        maxDDDate,
+        maxDDDetails,
+        globalMaxDDPercent,
+        scaleFactor,
+      }
     }
   }, [strategies, selectedIds, dateRange])
+
+  // Log max drawdown analysis once when data changes
+  useEffect(() => {
+    const logKey = `${Array.from(selectedIds).sort().join(',')}_${dateRange.startDate}_${dateRange.endDate}`
+    if (lastLoggedKey.current !== logKey && portfolioData.debugData) {
+      lastLoggedKey.current = logKey
+      const d = portfolioData.debugData
+
+      console.group('📊 Portfolio Max Drawdown Analysis')
+      console.log('🎯 Target DD Percent:', d.TARGET_DD_PERCENT + '%')
+      console.log('📈 Selected Strategies:', d.selectedCount)
+      console.log('💰 Max Drawdown (dollars):', '$' + d.maxDrawdownDollars.toFixed(2))
+      console.log('💵 Real Initial Capital:', '$' + d.realInitialCapital.toFixed(2))
+      console.log('')
+      console.log('📍 MAX DD Date:', d.maxDDDate)
+      console.log('📉 Max DD Details:')
+      console.table({
+        'Date': d.maxDDDetails.date,
+        'Profit (at max DD)': '$' + d.maxDDDetails.profit.toFixed(2),
+        'Drawdown Dollars': '$' + d.maxDDDetails.drawdownDollars.toFixed(2),
+        'Current Equity': '$' + d.maxDDDetails.currentEquity.toFixed(2),
+        'Peak Profit': '$' + d.maxDDDetails.peakProfit.toFixed(2),
+        'Peak Equity': '$' + d.maxDDDetails.peakEquity.toFixed(2),
+        'Drawdown Percent (unscaled)': d.maxDDDetails.drawdownPercent.toFixed(2) + '%',
+      })
+      console.log('')
+      console.log('🔢 Global Max DD Percent (unscaled):', d.globalMaxDDPercent.toFixed(2) + '%')
+      console.log('⚖️ Scale Factor:', d.scaleFactor.toFixed(4))
+      console.log('✅ Scaled Max DD Percent:', (d.globalMaxDDPercent * d.scaleFactor).toFixed(2) + '%', '(should equal target ' + d.TARGET_DD_PERCENT + '%)')
+      console.groupEnd()
+    }
+  }, [portfolioData, selectedIds, dateRange])
 
   // Handle strategy selection change
   const handleSelectionChange = (selected: string[]) => {
