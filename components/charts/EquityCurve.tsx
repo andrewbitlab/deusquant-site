@@ -75,7 +75,7 @@ export function EquityCurve({
 
   return (
     <div className="w-full h-[400px]">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={400}>
         <ComposedChart data={data} margin={{ top: 30, right: 30, left: 20, bottom: 0 }}>
           <defs>
             <linearGradient id="drawdownGradient" x1="0" y1="0" x2="0" y2="1">

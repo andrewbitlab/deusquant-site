@@ -17,8 +17,9 @@ export function Logo({ className, showText = true }: LogoProps) {
         <Image
           src="/brand/logo-name.png"
           alt="DEUS QUANT"
-          width={384}
-          height={48}
+          width={0}
+          height={0}
+          sizes="100vw"
           className="h-12 w-auto object-contain"
           priority
         />
