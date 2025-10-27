@@ -3,6 +3,7 @@
 interface Stat {
   label: string
   value: string | number
+  compoundedValue?: number // For showing fixed vs compounded comparison
   change?: number
   format?: 'currency' | 'percent' | 'number' | 'ratio'
 }
@@ -12,22 +13,25 @@ interface StatsPanelProps {
 }
 
 export function StatsPanel({ stats }: StatsPanelProps) {
-  const formatValue = (stat: Stat): string => {
-    if (typeof stat.value === 'string') return stat.value
-
+  const formatSingleValue = (value: number, stat: Stat): string => {
     switch (stat.format) {
       case 'currency':
-        return `$${Math.round(stat.value).toLocaleString('en-US')}`
+        return `$${Math.round(value).toLocaleString('en-US')}`
       case 'percent':
         // Add + sign for positive percentages (except Max Drawdown which is always shown as positive)
-        const sign = stat.value > 0 && !stat.label.includes('Drawdown') ? '+' : ''
-        return `${sign}${stat.value.toFixed(2)}%`
+        const sign = value > 0 && !stat.label.includes('Drawdown') ? '+' : ''
+        // Use whole numbers for Total Profit, 2 decimals for others
+        const decimals = stat.label.includes('Total Profit') ? 0 : 2
+        const formattedValue = stat.label.includes('Total Profit')
+          ? Math.round(value).toLocaleString('en-US')
+          : value.toFixed(decimals)
+        return `${sign}${formattedValue}%`
       case 'ratio':
-        return stat.value.toFixed(2)
+        return value.toFixed(2)
       case 'number':
-        return stat.value.toLocaleString()
+        return value.toLocaleString()
       default:
-        return stat.value.toLocaleString()
+        return value.toLocaleString()
     }
   }
 
@@ -40,24 +44,49 @@ export function StatsPanel({ stats }: StatsPanelProps) {
     return 'text-text-primary'
   }
 
+  // Check if any stat has compoundedValue to show legend
+  const hasCompoundedValues = stats.some(stat => stat.compoundedValue !== undefined)
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-      {stats.map((stat, i) => (
-        <div key={i} className="card flex flex-col">
-          <div className="stat-label h-12 flex items-start">{stat.label}</div>
-          <div className={`stat-value ${getValueColor(stat)}`}>{formatValue(stat)}</div>
-          {stat.change !== undefined && (
-            <div
-              className={
-                stat.change >= 0 ? 'stat-change-positive' : 'stat-change-negative'
-              }
-            >
-              {stat.change >= 0 ? '+' : ''}
-              {stat.change.toFixed(2)}%
-            </div>
-          )}
+    <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        {stats.map((stat, i) => (
+          <div key={i} className="card flex flex-col">
+            <div className="stat-label h-12 flex items-start">{stat.label}</div>
+            {typeof stat.value === 'string' ? (
+              <div className={`stat-value ${getValueColor(stat)}`}>{stat.value}</div>
+            ) : stat.compoundedValue !== undefined ? (
+              <div className="flex flex-col gap-0.5">
+                <div className={`stat-value ${getValueColor(stat)}`}>
+                  {formatSingleValue(stat.value as number, stat)}
+                </div>
+                <div className={`stat-value text-accent-profit`}>
+                  {formatSingleValue(stat.compoundedValue, stat)}
+                </div>
+              </div>
+            ) : (
+              <div className={`stat-value ${getValueColor(stat)}`}>
+                {formatSingleValue(stat.value as number, stat)}
+              </div>
+            )}
+            {stat.change !== undefined && (
+              <div
+                className={
+                  stat.change >= 0 ? 'stat-change-positive' : 'stat-change-negative'
+                }
+              >
+                {stat.change >= 0 ? '+' : ''}
+                {stat.change.toFixed(2)}%
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {hasCompoundedValues && (
+        <div className="mt-2 text-sm text-text-secondary text-center">
+          Values shown as: <span className="font-semibold">Fixed Position</span> (top) / <span className="font-semibold">Monthly Compounding</span> (bottom)
         </div>
-      ))}
+      )}
     </div>
   )
 }

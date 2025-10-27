@@ -77,6 +77,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
         ],
         profitCurve: [],
         normalizedProfitCurve: [],
+        compoundedNormalizedCurve: [],
         forwardTestStartDate: undefined,
       }
     }
@@ -197,6 +198,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
         ],
         profitCurve: [],
         normalizedProfitCurve: [],
+        compoundedNormalizedCurve: [],
         forwardTestStartDate: undefined,
       }
     }
@@ -246,10 +248,140 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       }
     })
 
-    // Step 8: Calculate scaled total profit
+    // Step 8: Calculate time period for filtered range (needed for compounded calculations)
+    const firstDate = new Date(filteredCurve[0].date)
+    const lastDate = new Date(filteredCurve[filteredCurve.length - 1].date)
+    const yearsElapsed = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+    const monthsElapsed = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44) // Average days per month
+
+    // Step 9: Calculate compounded curve with monthly reinvestment
+    // This simulates reinvesting all profits at the beginning of each month
+    let capitalMultiplier = 1.0
+    let lastMonth = ''
+    let monthStartFixedProfit = 0
+    let monthStartCompoundedProfit = 0
+
+    const compoundedDollarCurve = []
+
+    for (let i = 0; i < filteredCurve.length; i++) {
+      const point = filteredCurve[i]
+      const currentMonth = point.date.substring(0, 7) // "YYYY-MM"
+
+      // Check for new month
+      if (i === 0) {
+        lastMonth = currentMonth
+        monthStartFixedProfit = point.profit
+        monthStartCompoundedProfit = point.profit
+      } else if (currentMonth !== lastMonth) {
+        // New month - calculate return for previous month and update multiplier
+        const prevPoint = filteredCurve[i - 1]
+        const prevMonthEndEquity = realInitialCapital + prevPoint.profit
+        const monthStartEquity = realInitialCapital + monthStartFixedProfit
+        const monthReturn = (prevMonthEndEquity - monthStartEquity) / monthStartEquity
+        capitalMultiplier *= (1 + monthReturn)
+
+        // Set new month start values
+        monthStartFixedProfit = prevPoint.profit
+        monthStartCompoundedProfit = compoundedDollarCurve[i - 1].profit
+        lastMonth = currentMonth
+      }
+
+      // Calculate incremental profit within the month (fixed positions)
+      const incrementalFixedProfit = point.profit - monthStartFixedProfit
+
+      // Compounded profit = month start compounded profit + scaled incremental profit
+      const compoundedProfit = monthStartCompoundedProfit + incrementalFixedProfit * capitalMultiplier
+
+      compoundedDollarCurve.push({
+        date: point.date,
+        profit: compoundedProfit,
+        drawdown: 0, // Will calculate below
+      })
+    }
+
+    // Step 9: Calculate drawdowns for compounded curve
+    let maxCompoundedProfit = 0
+    let maxCompoundedDrawdownDollars = 0
+    for (const point of compoundedDollarCurve) {
+      if (point.profit > maxCompoundedProfit) {
+        maxCompoundedProfit = point.profit
+      }
+      point.drawdown = maxCompoundedProfit - point.profit
+      if (point.drawdown > maxCompoundedDrawdownDollars) {
+        maxCompoundedDrawdownDollars = point.drawdown
+      }
+    }
+
+    // Step 10: Normalize compounded curve to percentages and apply same scale factor
+    let maxCompoundedDDPercent = 0
+    const compoundedNormalizedCurve = compoundedDollarCurve.map((point) => {
+      const currentEquity = realInitialCapital + point.profit
+      const drawdownDollars = point.drawdown
+      const peakProfit = point.profit + drawdownDollars
+      const peakEquity = realInitialCapital + peakProfit
+
+      // Drawdown % = DD$ / Peak Equity × 100
+      const drawdownPercent = peakEquity > 0 ? (drawdownDollars / peakEquity) * 100 : 0
+
+      // Apply SAME scale factor as fixed curve
+      const scaledDrawdownPercent = drawdownPercent * scaleFactor
+
+      // Track max DD in compounded curve
+      if (scaledDrawdownPercent > maxCompoundedDDPercent) {
+        maxCompoundedDDPercent = scaledDrawdownPercent
+      }
+
+      // Normalize profit to start at 0%
+      const normalizedPercent = ((currentEquity - startEquity) / startEquity) * 100
+      const scaledNormalizedPercent = normalizedPercent * scaleFactor
+
+      return {
+        date: point.date,
+        profit: scaledNormalizedPercent,
+        drawdown: scaledDrawdownPercent,
+      }
+    })
+
+    // Step 11: Calculate compounded metrics
+    const compoundedEndProfit = compoundedDollarCurve[compoundedDollarCurve.length - 1].profit
+    const compoundedEndEquity = realInitialCapital + compoundedEndProfit
+    const compoundedTotalProfitPercent = ((compoundedEndEquity - startEquity) / startEquity) * 100
+    const scaledCompoundedTotalProfitPercent = compoundedTotalProfitPercent * scaleFactor
+
+    // Monthly profit for compounded (use compound monthly growth rate, not simple average)
+    const compoundedMonthlyProfitPercent = monthsElapsed > 0
+      ? (Math.pow(1 + compoundedTotalProfitPercent / 100, 1 / monthsElapsed) - 1) * 100 * scaleFactor
+      : scaledCompoundedTotalProfitPercent
+
+    // Annualized return for compounded (use CAGR since profits are being reinvested)
+    const compoundedAnnualizedReturn = yearsElapsed > 0
+      ? (Math.pow(1 + compoundedTotalProfitPercent / 100, 1 / yearsElapsed) - 1) * 100
+      : compoundedTotalProfitPercent
+    const scaledCompoundedAnnualizedReturn = compoundedAnnualizedReturn * scaleFactor
+
+    // Calmar for compounded
+    const compoundedCalmarRatio = maxCompoundedDDPercent > 0
+      ? scaledCompoundedAnnualizedReturn / maxCompoundedDDPercent
+      : 0
+
+    // Sharpe for compounded
+    const compoundedDailyReturns: number[] = []
+    for (let i = 1; i < compoundedDollarCurve.length; i++) {
+      const prevEquity = realInitialCapital + compoundedDollarCurve[i - 1].profit
+      const currEquity = realInitialCapital + compoundedDollarCurve[i].profit
+      const dailyReturn = (currEquity - prevEquity) / prevEquity
+      compoundedDailyReturns.push(dailyReturn)
+    }
+
+    const compoundedAvgDailyReturn = compoundedDailyReturns.reduce((sum, r) => sum + r, 0) / compoundedDailyReturns.length
+    const compoundedVariance = compoundedDailyReturns.reduce((sum, r) => sum + Math.pow(r - compoundedAvgDailyReturn, 2), 0) / compoundedDailyReturns.length
+    const compoundedStdDev = Math.sqrt(compoundedVariance)
+    const compoundedSharpe = compoundedStdDev > 0 ? (compoundedAvgDailyReturn / compoundedStdDev) * Math.sqrt(252) : 0
+
+    // Step 12: Calculate scaled total profit (fixed)
     const scaledTotalProfitPercent = totalProfitPercent * scaleFactor
 
-    // Step 9: Calculate metrics using SCALED percentages
+    // Step 13: Calculate metrics using SCALED percentages
     if (filteredCurve.length < 2) {
       return {
         stats: [
@@ -262,15 +394,10 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
         ],
         profitCurve: filteredCurve,
         normalizedProfitCurve: normalizedCurve,
+        compoundedNormalizedCurve: normalizedCurve, // Same as fixed when only 1 point
         forwardTestStartDate: undefined,
       }
     }
-
-    // Calculate time period for filtered range
-    const firstDate = new Date(filteredCurve[0].date)
-    const lastDate = new Date(filteredCurve[filteredCurve.length - 1].date)
-    const yearsElapsed = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
-    const monthsElapsed = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44) // Average days per month
 
     // NOTE: Since strategies use fixed position sizing (no compounding/reinvestment),
     // we use Simple Annualized Return instead of CAGR
@@ -306,11 +433,35 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
 
     const stats = [
       { label: 'Total Strategies', value: selected.length, format: 'number' as const },
-      { label: 'Total Profit', value: scaledTotalProfitPercent, format: 'percent' as const },
-      { label: 'Monthly Profit', value: monthlyProfitPercent, format: 'percent' as const },
-      { label: 'Max Drawdown', value: maxDDPercentInPeriod, format: 'percent' as const },
-      { label: 'Sharpe Ratio', value: portfolioSharpe, format: 'ratio' as const },
-      { label: 'Calmar Ratio', value: calmarRatio, format: 'ratio' as const },
+      {
+        label: 'Total Profit',
+        value: scaledTotalProfitPercent,
+        compoundedValue: scaledCompoundedTotalProfitPercent,
+        format: 'percent' as const
+      },
+      {
+        label: 'Monthly Profit',
+        value: monthlyProfitPercent,
+        format: 'percent' as const
+      },
+      {
+        label: 'Max Drawdown',
+        value: maxDDPercentInPeriod,
+        compoundedValue: maxCompoundedDDPercent,
+        format: 'percent' as const
+      },
+      {
+        label: 'Sharpe Ratio',
+        value: portfolioSharpe,
+        compoundedValue: compoundedSharpe,
+        format: 'ratio' as const
+      },
+      {
+        label: 'Calmar Ratio',
+        value: calmarRatio,
+        compoundedValue: compoundedCalmarRatio,
+        format: 'ratio' as const
+      },
     ]
 
     // Determine forward test start date (earliest among selected strategies)
@@ -323,6 +474,7 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       stats,
       profitCurve: filteredCurve,
       normalizedProfitCurve: normalizedCurve,
+      compoundedNormalizedCurve,
       forwardTestStartDate,
       // Debug data for logging
       debugData: {
@@ -337,6 +489,13 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
         annualizedReturn,
         compoundCAGR,
         maxDDPercentInPeriod,
+        // Compounded metrics
+        compoundedTotalProfit: scaledCompoundedTotalProfitPercent,
+        compoundedAnnualizedReturn: scaledCompoundedAnnualizedReturn,
+        compoundedMaxDD: maxCompoundedDDPercent,
+        compoundedSharpe,
+        compoundedCalmarRatio,
+        capitalMultiplierFinal: capitalMultiplier,
       }
     }
   }, [strategies, selectedIds, dateRange])
@@ -376,8 +535,35 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
       console.log('  📈 Simple Annualized Return:', d.annualizedReturn.toFixed(2) + '%', '(used for Calmar)')
       console.log('  🔄 Compound CAGR (hypothetical):', d.compoundCAGR.toFixed(2) + '%', '(if reinvesting)')
       console.log('')
-      console.log('🧮 Calmar Calculation:', d.annualizedReturn.toFixed(2) + '% / ' + d.maxDDPercentInPeriod.toFixed(2) + '% = ' + (d.annualizedReturn / d.maxDDPercentInPeriod).toFixed(2))
-      console.log('✅ Calmar Ratio:', portfolioData.stats[5].value.toFixed(2))
+      console.log('🧮 Calmar Calculation (Fixed):', d.annualizedReturn.toFixed(2) + '% / ' + d.maxDDPercentInPeriod.toFixed(2) + '% = ' + (d.annualizedReturn / d.maxDDPercentInPeriod).toFixed(2))
+      console.log('✅ Calmar Ratio (Fixed):', portfolioData.stats[5].value.toFixed(2))
+      console.log('')
+      console.log('🔄 Monthly Compounding Metrics:')
+      console.log('  📊 Total Profit (Compounded):', d.compoundedTotalProfit.toFixed(2) + '%')
+      console.log('  📈 Annualized Return (CAGR):', d.compoundedAnnualizedReturn.toFixed(2) + '%')
+      console.log('  📉 Max Drawdown (Compounded):', d.compoundedMaxDD.toFixed(2) + '%')
+      console.log('  ⚡ Sharpe Ratio (Compounded):', d.compoundedSharpe.toFixed(2))
+      console.log('  🧮 Calmar Ratio (Compounded):', d.compoundedCalmarRatio.toFixed(2))
+      console.log('  💰 Final Capital Multiplier:', d.capitalMultiplierFinal.toFixed(4) + 'x')
+      console.log('')
+      console.log('📊 Comparison (Fixed vs Compounded):')
+      console.table({
+        'Metric': ['Total Profit', 'Annualized Return', 'Max Drawdown', 'Sharpe Ratio', 'Calmar Ratio'],
+        'Fixed': [
+          d.annualizedReturn.toFixed(2) + '%',
+          d.annualizedReturn.toFixed(2) + '%',
+          d.maxDDPercentInPeriod.toFixed(2) + '%',
+          portfolioData.stats[4].value.toFixed(2),
+          portfolioData.stats[5].value.toFixed(2)
+        ],
+        'Compounded': [
+          d.compoundedTotalProfit.toFixed(2) + '%',
+          d.compoundedAnnualizedReturn.toFixed(2) + '%',
+          d.compoundedMaxDD.toFixed(2) + '%',
+          d.compoundedSharpe.toFixed(2),
+          d.compoundedCalmarRatio.toFixed(2)
+        ]
+      })
       console.groupEnd()
     }
   }, [portfolioData, selectedIds, dateRange])
@@ -431,9 +617,10 @@ export function DashboardClient({ strategies }: DashboardClientProps) {
           )}
         </h2>
         <EquityCurve
-          data={portfolioData.normalizedProfitCurve.map((p) => ({
+          data={portfolioData.normalizedProfitCurve.map((p, i) => ({
             date: p.date,
             equity: p.profit, // Already in percentage terms, normalized to 0%
+            equityCompounded: portfolioData.compoundedNormalizedCurve[i]?.profit, // Compounded profit
             drawdown: -p.drawdown, // Negative so it displays below axis
           }))}
           showDrawdown={true}

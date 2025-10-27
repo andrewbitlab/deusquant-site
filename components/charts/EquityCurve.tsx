@@ -11,12 +11,14 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  Legend,
 } from 'recharts'
 
 interface EquityCurveProps {
   data: Array<{
     date: string
     equity: number
+    equityCompounded?: number // Compounded equity with monthly reinvestment
     drawdown?: number
   }>
   showDrawdown?: boolean
@@ -30,9 +32,15 @@ export function EquityCurve({
   forwardTestStartDate,
   isPercentage = false
 }: EquityCurveProps) {
-  // Calculate dynamic Y-axis domain based on actual data
-  const maxEquity = Math.max(...data.map(d => d.equity))
+  // Calculate dynamic Y-axis domain based on actual data (including compounded if present)
+  const maxEquity = Math.max(
+    ...data.map(d => d.equity),
+    ...data.map(d => d.equityCompounded || 0)
+  )
   const minDrawdown = Math.min(...data.map(d => d.drawdown || 0))
+
+  // Check if we have compounded data
+  const hasCompoundedData = data.some(d => d.equityCompounded !== undefined)
 
   // Smart rounding function to get nice round numbers with equal intervals
   const calculateNiceScale = (dataMin: number, dataMax: number) => {
@@ -132,10 +140,12 @@ export function EquityCurve({
             }}
             formatter={(value: number, name: string) => {
               if (isPercentage) {
-                if (name === 'equity') return [`${value.toFixed(2)}%`, 'Profit']
+                if (name === 'equity') return [`${value.toFixed(2)}%`, 'Profit (Fixed)']
+                if (name === 'equityCompounded') return [`${value.toFixed(2)}%`, 'Profit (Compounded)']
                 if (name === 'drawdown') return [`${Math.abs(value).toFixed(2)}%`, 'Drawdown']
               } else {
-                if (name === 'equity') return [`$${Math.round(value).toLocaleString('en-US')}`, 'Profit']
+                if (name === 'equity') return [`$${Math.round(value).toLocaleString('en-US')}`, 'Profit (Fixed)']
+                if (name === 'equityCompounded') return [`$${Math.round(value).toLocaleString('en-US')}`, 'Profit (Compounded)']
                 if (name === 'drawdown') return [`$${Math.round(Math.abs(value)).toLocaleString('en-US')}`, 'Drawdown']
               }
               return [value, name]
@@ -160,14 +170,46 @@ export function EquityCurve({
             />
           )}
 
+          {/* Legend - only show if we have compounded data */}
+          {hasCompoundedData && (
+            <Legend
+              verticalAlign="top"
+              height={36}
+              iconType="line"
+              formatter={(value: string) => {
+                if (value === 'equity') return 'Fixed Position'
+                if (value === 'equityCompounded') return 'Monthly Compounding'
+                return value
+              }}
+              wrapperStyle={{
+                paddingBottom: '10px',
+                fontSize: '12px',
+              }}
+            />
+          )}
+
           <Line
             type="monotone"
             dataKey="equity"
+            name="equity"
             stroke="#54585f"
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4, fill: '#54585f' }}
           />
+
+          {/* Compounded Line - only show if data exists */}
+          {hasCompoundedData && (
+            <Line
+              type="monotone"
+              dataKey="equityCompounded"
+              name="equityCompounded"
+              stroke="#10b981"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, fill: '#10b981' }}
+            />
+          )}
 
           {showDrawdown && (
             <Area
