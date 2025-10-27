@@ -19,8 +19,7 @@ export function Logo({ className, showText = true }: LogoProps) {
           alt="DEUS QUANT"
           width={384}
           height={48}
-          className="h-full w-auto object-contain m-0 p-0"
-          style={{ width: 'auto' }}
+          className="h-12 w-auto object-contain"
           priority
         />
       </div>
