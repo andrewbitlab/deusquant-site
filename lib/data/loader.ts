@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from './prisma'
 import {
   calculateStatistics,
   buildProfitCurve,
@@ -7,8 +7,29 @@ import {
   normalizeStatistics,
   type ProfitCurvePoint,
 } from '../calculators/statistics'
+import type { MT5Transaction } from '../parsers/mt5/types'
+import type { Transaction } from '@prisma/client'
 
-const prisma = new PrismaClient()
+// Convert Prisma Transaction to MT5Transaction format
+function toMT5Transaction(tx: Transaction): MT5Transaction {
+  return {
+    id: tx.orderId, // Use orderId as id (number)
+    type: tx.type as 'BUY' | 'SELL' | 'BALANCE' | 'CREDIT',
+    openTime: tx.openTime,
+    closeTime: tx.closeTime ?? undefined,
+    symbol: tx.symbol,
+    volume: tx.volume,
+    openPrice: tx.openPrice,
+    closePrice: tx.closePrice ?? undefined,
+    sl: tx.sl ?? undefined,
+    tp: tx.tp ?? undefined,
+    commission: tx.commission,
+    swap: tx.swap,
+    profit: tx.profit,
+    balance: tx.balance ?? undefined,
+    comment: tx.comment ?? undefined,
+  }
+}
 
 /**
  * Get all strategies with combined backtest and forward data from database
@@ -32,19 +53,20 @@ export interface StrategyData {
 }
 
 export async function getAllStrategies(): Promise<StrategyData[]> {
-  // Query all strategies with their transactions from database
-  const dbStrategies = await prisma.strategy.findMany({
-    where: {
-      isActive: true,
-    },
-    include: {
-      transactions: {
-        orderBy: {
-          openTime: 'asc',
+  try {
+    // Query all strategies with their transactions from database
+    const dbStrategies = await prisma.strategy.findMany({
+      where: {
+        isActive: true,
+      },
+      include: {
+        transactions: {
+          orderBy: {
+            openTime: 'asc',
+          },
         },
       },
-    },
-  })
+    })
 
   const strategies: StrategyData[] = []
 
@@ -56,9 +78,9 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
       continue
     }
 
-    // Separate backtest and forward test transactions
-    const backtestTransactions = transactions.filter(tx => !tx.isForwardTest)
-    const forwardTransactions = transactions.filter(tx => tx.isForwardTest)
+    // Separate backtest and forward test transactions and convert to MT5 format
+    const backtestTransactions = transactions.filter(tx => !tx.isForwardTest).map(toMT5Transaction)
+    const forwardTransactions = transactions.filter(tx => tx.isForwardTest).map(toMT5Transaction)
 
     const hasForwardTest = forwardTransactions.length > 0
     const forwardTestStartDate = hasForwardTest
@@ -181,7 +203,13 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
     })
   }
 
-  console.log(`Loaded ${strategies.length} strategies from database`)
+    console.log(`Loaded ${strategies.length} strategies from database`)
 
-  return strategies
+    return strategies
+  } catch (error) {
+    console.error('Failed to load strategies from database:', error)
+    throw new Error(
+      `Database query failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    )
+  }
 }

@@ -219,8 +219,8 @@ async function importForwardTests() {
             profitFactor: forwardStats.profitFactor,
             sharpeRatio: forwardStats.sharpeRatio,
             maxDrawdown: forwardStats.maxDrawdown,
-            totalProfit: forwardStats.totalProfit,
-            avgTrade: forwardStats.avgTrade,
+            totalProfit: forwardStats.totalNetProfit,
+            expectedPayoff: forwardStats.expectedPayoff,
             ...forwardDrawdowns
           }),
           

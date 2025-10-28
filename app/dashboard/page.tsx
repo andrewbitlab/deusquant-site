@@ -4,8 +4,8 @@ import { getAllStrategies } from '@/lib/data/loader'
 
 // Revalidate every 1 hour (3600 seconds) - ISR with cache
 export const revalidate = 3600
-// Increase timeout for loading 113MB of xlsx files
-export const maxDuration = 30
+// Increase timeout for database queries (cold start can take longer)
+export const maxDuration = 60
 // Force cache to work properly on Netlify
 export const fetchCache = 'force-cache'
 
