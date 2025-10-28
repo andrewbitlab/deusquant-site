@@ -26,11 +26,12 @@ import type { Transaction } from '@prisma/client'
  * Load complete strategy report data
  */
 export async function loadStrategyReport(magicNumber: string): Promise<StrategyReportData> {
-  // 1. Load strategy and transactions from database
+  // 1. Load strategy and transactions from database (backtest only)
   const strategy = await prisma.strategy.findUnique({
     where: { magicNumber: parseInt(magicNumber) },
     include: {
       transactions: {
+        where: { isForwardTest: false },
         orderBy: { openTime: 'asc' },
       },
     },
