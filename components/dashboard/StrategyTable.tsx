@@ -125,11 +125,11 @@ export function StrategyTable({
                 <td className="font-mono">{strategy.sharpeRatio.toFixed(2)}</td>
                 <td>
                   <Link
-                    href={`/dashboard/backtest/${strategy.magicNumber}`}
+                    href={`/dashboard/strategy/${strategy.magicNumber}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-accent-info hover:text-blue-700 hover:underline transition-colors min-h-[44px]"
-                    title="View Backtest Report"
+                    title="View Strategy Report"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
