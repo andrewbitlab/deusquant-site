@@ -6,4 +6,3 @@
 export { EquityCurveChart } from './EquityCurveChart'
 export { DistributionChartsGrid } from './DistributionChartsGrid'
 export { HoldingTimeScatterChart } from './HoldingTimeScatterChart'
-export { MFEMAEChartsGrid } from './MFEMAEChartsGrid'

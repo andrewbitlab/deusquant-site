@@ -8,7 +8,6 @@ import {
   EquityCurveChart,
   DistributionChartsGrid,
   HoldingTimeScatterChart,
-  MFEMAEChartsGrid,
 } from '@/components/strategy-report/charts'
 
 // Increase timeout for complex report generation
@@ -83,14 +82,6 @@ export default async function StrategyReportPage({ params }: PageProps) {
               Holding Time Analysis
             </h3>
             <HoldingTimeScatterChart data={reportData.charts.holdingTimeScatter} />
-          </div>
-
-          {/* MAE/MFE Analysis */}
-          <div className="space-y-2">
-            <h3 className="text-lg font-display font-medium text-text-primary">
-              MAE/MFE Analysis
-            </h3>
-            <MFEMAEChartsGrid data={reportData.charts.maemfe} />
           </div>
         </div>
 

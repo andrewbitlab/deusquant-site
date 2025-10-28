@@ -165,9 +165,6 @@ export interface ChartData {
   // Drawdown over time
   drawdown: DrawdownPoint[]
 
-  // MAE/MFE scatter plot data
-  maemfe: MAEMFEPoint[]
-
   // Profit distribution histogram
   profitDistribution: DistributionBin[]
 

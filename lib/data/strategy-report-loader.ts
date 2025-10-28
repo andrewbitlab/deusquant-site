@@ -61,6 +61,7 @@ export async function loadStrategyReport(magicNumber: string): Promise<StrategyR
 
 /**
  * Calculate hourly distribution of trades and P&L
+ * Converts UTC to broker time (UTC+2)
  */
 function calculateHourlyDistribution(trades: Transaction[]): import('../types/strategy-report').TimeDistribution[] {
   const hourlyData: { [hour: number]: { entries: number; profit: number; loss: number } } = {}
@@ -70,14 +71,15 @@ function calculateHourlyDistribution(trades: Transaction[]): import('../types/st
     hourlyData[i] = { entries: 0, profit: 0, loss: 0 }
   }
 
-  // Count entries and P&L by hour
+  // Count entries and P&L by hour (convert UTC to UTC+2 broker time)
   for (const trade of trades) {
-    const hour = trade.openTime.getHours()
-    hourlyData[hour].entries++
+    const utcHour = trade.openTime.getUTCHours()
+    const brokerHour = (utcHour + 2) % 24 // Convert UTC to UTC+2
+    hourlyData[brokerHour].entries++
     if (trade.profit > 0) {
-      hourlyData[hour].profit += trade.profit
+      hourlyData[brokerHour].profit += trade.profit
     } else {
-      hourlyData[hour].loss += trade.profit
+      hourlyData[brokerHour].loss += trade.profit
     }
   }
 
@@ -93,6 +95,7 @@ function calculateHourlyDistribution(trades: Transaction[]): import('../types/st
 
 /**
  * Calculate daily distribution (by day of week)
+ * Converts UTC to broker time (UTC+2)
  */
 function calculateDailyDistribution(trades: Transaction[]): import('../types/strategy-report').TimeDistribution[] {
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -103,9 +106,11 @@ function calculateDailyDistribution(trades: Transaction[]): import('../types/str
     dailyData[i] = { entries: 0, profit: 0, loss: 0 }
   }
 
-  // Count entries and P&L by day of week
+  // Count entries and P&L by day of week (convert UTC to UTC+2 broker time)
   for (const trade of trades) {
-    const day = trade.openTime.getDay()
+    // Create date in broker time (UTC+2)
+    const brokerTime = new Date(trade.openTime.getTime() + 2 * 60 * 60 * 1000)
+    const day = brokerTime.getUTCDay()
     dailyData[day].entries++
     if (trade.profit > 0) {
       dailyData[day].profit += trade.profit
@@ -126,6 +131,7 @@ function calculateDailyDistribution(trades: Transaction[]): import('../types/str
 
 /**
  * Calculate monthly distribution
+ * Converts UTC to broker time (UTC+2)
  */
 function calculateMonthlyDistribution(trades: Transaction[]): import('../types/strategy-report').TimeDistribution[] {
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -136,9 +142,11 @@ function calculateMonthlyDistribution(trades: Transaction[]): import('../types/s
     monthlyData[i] = { entries: 0, profit: 0, loss: 0 }
   }
 
-  // Count entries and P&L by month
+  // Count entries and P&L by month (convert UTC to UTC+2 broker time)
   for (const trade of trades) {
-    const month = trade.openTime.getMonth()
+    // Create date in broker time (UTC+2)
+    const brokerTime = new Date(trade.openTime.getTime() + 2 * 60 * 60 * 1000)
+    const month = brokerTime.getUTCMonth()
     monthlyData[month].entries++
     if (trade.profit > 0) {
       monthlyData[month].profit += trade.profit
@@ -179,38 +187,6 @@ function calculateHoldingTimeScatter(trades: Transaction[]): import('../types/st
   }
 
   return scatterData
-}
-
-/**
- * Calculate MAE/MFE data from transactions
- */
-function calculateMAEMFE(transactions: Transaction[]): import('../types/strategy-report').MAEMFEPoint[] {
-  const maeData: import('../types/strategy-report').MAEMFEPoint[] = []
-
-  // Filter only trades with close times
-  const trades = transactions.filter(tx =>
-    (tx.type === 'BUY' || tx.type === 'SELL') && tx.closeTime
-  )
-
-  for (const trade of trades) {
-    // For now, use simple approximation based on profit
-    // MAE (Maximum Adverse Excursion) - worst point before close
-    // MFE (Maximum Favorable Excursion) - best point before close
-    const mae = trade.profit < 0 ? trade.profit * 1.2 : trade.profit * -0.1
-    const mfe = trade.profit > 0 ? trade.profit * 1.2 : trade.profit * 0.1
-
-    maeData.push({
-      tradeId: trade.orderId,
-      profit: trade.profit,
-      mae,
-      mfe,
-      volume: trade.volume,
-      openTime: trade.openTime.toISOString(),
-      closeTime: trade.closeTime!.toISOString(),
-    })
-  }
-
-  return maeData
 }
 
 /**
@@ -268,13 +244,9 @@ function calculateChartData(transactions: Transaction[]): ChartData {
   // Calculate holding time scatter data
   const holdingTimeScatter = calculateHoldingTimeScatter(trades)
 
-  // Calculate MAE/MFE scatter data
-  const maemfe = calculateMAEMFE(transactions)
-
   return {
     equityCurve,
     drawdown,
-    maemfe,
     profitDistribution,
     holdingTime,
     hourlyDistribution,
