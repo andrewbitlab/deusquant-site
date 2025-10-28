@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -58,7 +58,7 @@ model Transaction {
   strategy      Strategy  @relation(fields: [strategyId], references: [id], onDelete: Cascade)
 
   // Trade data
-  orderId       Int       @unique
+  orderId       Int       // Not unique - different strategies can have same order IDs
   type          String    // BUY, SELL, BUY_LIMIT, SELL_LIMIT, BUY_STOP, SELL_STOP, BALANCE, CREDIT
   symbol        String
   volume        Float
@@ -87,6 +87,7 @@ model Transaction {
 
   @@index([strategyId, openTime])
   @@index([symbol])
+  @@index([strategyId, orderId]) // For lookups by strategy and order
 }
 
 model Portfolio {

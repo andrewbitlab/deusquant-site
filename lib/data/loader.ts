@@ -1,9 +1,4 @@
-import { readFileSync, readdirSync } from 'fs'
-import { join } from 'path'
-import { MT5ExcelParser } from '../parsers/mt5/excel-parser'
-import { ForwardCSVParser } from '../parsers/csv/forward-parser'
-import type { MT5ParseResult } from '../parsers/mt5/types'
-import type { ForwardTestData } from '../parsers/csv/forward-parser'
+import { PrismaClient } from '@prisma/client'
 import {
   calculateStatistics,
   buildProfitCurve,
@@ -13,121 +8,10 @@ import {
   type ProfitCurvePoint,
 } from '../calculators/statistics'
 
-/**
- * Load strategy names from names.json
- */
-function loadStrategyNames(): Record<string, string> {
-  try {
-    const namesPath = join(process.cwd(), 'data', 'names.json')
-    const namesContent = readFileSync(namesPath, 'utf-8')
-    return JSON.parse(namesContent)
-  } catch (error) {
-    console.warn('Failed to load strategy names from names.json:', error)
-    return {}
-  }
-}
+const prisma = new PrismaClient()
 
 /**
- * Get strategy name by magic number
- */
-function getStrategyName(
-  magicNumber: number,
-  strategyNames: Record<string, string>,
-  customComment?: string
-): string {
-  // Priority: 1. names.json, 2. customComment, 3. fallback
-  const name = strategyNames[magicNumber.toString()]
-  if (name) return name
-  if (customComment) return customComment
-  return `Strategy ${magicNumber}`
-}
-
-/**
- * Load all backtest files from data directory
- */
-export async function loadBacktests(): Promise<MT5ParseResult[]> {
-  const dataDir = join(process.cwd(), 'data', 'backtest')
-
-  // Dynamically read all .xlsx files from the backtest directory
-  const allFiles = readdirSync(dataDir)
-  const xlsxFiles = allFiles.filter(file => file.endsWith('.xlsx'))
-
-  console.log(`Found ${xlsxFiles.length} backtest files: ${xlsxFiles.join(', ')}`)
-
-  const results: MT5ParseResult[] = []
-
-  for (const filename of xlsxFiles) {
-    try {
-      const filePath = join(dataDir, filename)
-      const buffer = readFileSync(filePath)
-      const file = new File([buffer], filename, {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      })
-
-      const result = await MT5ExcelParser.parseFile(file)
-
-      if (result.success) {
-        results.push(result.data)
-        console.log(`✓ Loaded backtest: ${filename}`)
-      }
-    } catch (error) {
-      console.error(`✗ Failed to load ${filename}:`, error)
-    }
-  }
-
-  return results
-}
-
-/**
- * Load forward test data - automatically loads the most recent CSV file
- */
-export async function loadForwardTests(): Promise<ForwardTestData | null> {
-  try {
-    const dataDir = join(process.cwd(), 'data', 'forward')
-
-    // Find all CSV files in forward directory
-    const allFiles = readdirSync(dataDir)
-    const csvFiles = allFiles.filter(file => file.endsWith('.csv'))
-
-    if (csvFiles.length === 0) {
-      console.log('No forward test CSV files found')
-      return null
-    }
-
-    // Get the most recent CSV file (by modification time)
-    const csvFilesWithStats = csvFiles.map(file => {
-      const filePath = join(dataDir, file)
-      const stats = require('fs').statSync(filePath)
-      return { file, mtime: stats.mtime }
-    })
-
-    csvFilesWithStats.sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
-    const latestCsvFile = csvFilesWithStats[0].file
-
-    console.log(`Loading forward tests from: ${latestCsvFile}`)
-
-    const filePath = join(dataDir, latestCsvFile)
-
-    // Read CSV file content as string
-    const csvContent = readFileSync(filePath, 'utf-8')
-
-    // Parse CSV content (server-side)
-    const result = ForwardCSVParser.parseCSVContent(csvContent)
-
-    console.log(`Loaded forward tests: ${result.tradesByStrategy.size} strategies`)
-    Array.from(result.tradesByStrategy.entries()).forEach(([magic, transactions]) => {
-      console.log(`  Strategy ${magic}: ${transactions.length} forward test transactions`)
-    })
-
-    return result
-  } catch (error) {
-    console.error('Failed to load forward tests:', error)
-    return null
-  }
-}
-
-/**
- * Get all strategies with combined backtest and forward data
+ * Get all strategies with combined backtest and forward data from database
  */
 export interface StrategyData {
   magicNumber: number
@@ -148,31 +32,52 @@ export interface StrategyData {
 }
 
 export async function getAllStrategies(): Promise<StrategyData[]> {
-  const backtests = await loadBacktests()
-  const forwardTestData = await loadForwardTests()
+  // Query all strategies with their transactions from database
+  const dbStrategies = await prisma.strategy.findMany({
+    where: {
+      isActive: true,
+    },
+    include: {
+      transactions: {
+        orderBy: {
+          openTime: 'asc',
+        },
+      },
+    },
+  })
+
   const strategies: StrategyData[] = []
 
-  // Load strategy names from names.json
-  const strategyNames = loadStrategyNames()
+  for (const dbStrategy of dbStrategies) {
+    const transactions = dbStrategy.transactions
 
-  // Create a map of forward test transactions by magic number
-  const forwardTestsByMagic = forwardTestData?.tradesByStrategy || new Map()
-
-  for (const backtest of backtests) {
-    const backtestTransactions = backtest.transactions || []
-
-    if (backtestTransactions.length === 0) {
-      console.warn(`Strategy ${backtest.metadata.magicNumber} has no transactions`)
+    if (transactions.length === 0) {
+      console.warn(`Strategy ${dbStrategy.magicNumber} has no transactions`)
       continue
     }
 
-    const magicNumber = backtest.metadata.magicNumber
+    // Separate backtest and forward test transactions
+    const backtestTransactions = transactions.filter(tx => !tx.isForwardTest)
+    const forwardTransactions = transactions.filter(tx => tx.isForwardTest)
+
+    const hasForwardTest = forwardTransactions.length > 0
+    const forwardTestStartDate = hasForwardTest
+      ? forwardTransactions[0].openTime.toISOString().split('T')[0]
+      : undefined
+
+    const magicNumber = dbStrategy.magicNumber
     const initialBalance = backtestTransactions[0]?.balance || 10000
 
     // STEP 1: Analyze backtest volumes
     const backtestVolumes = backtestTransactions
       .filter(tx => tx.type === 'BUY' || tx.type === 'SELL')
       .map(tx => tx.volume)
+
+    if (backtestVolumes.length === 0) {
+      console.warn(`Strategy ${magicNumber} has no backtest trade volumes`)
+      continue
+    }
+
     const avgBacktestVolume = backtestVolumes.reduce((sum, v) => sum + v, 0) / backtestVolumes.length
 
     // Calculate backtest-only statistics to get the scale factor
@@ -185,17 +90,12 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
     )
 
     // STEP 2: Scale forward test transactions - BOTH volume AND profit
-    const rawForwardTransactions = forwardTestsByMagic.get(magicNumber) || []
-    const hasForwardTest = rawForwardTransactions.length > 0
-    let forwardTestStartDate: string | undefined
     let scaledForwardTransactions: any[] = []
 
     if (hasForwardTest) {
-      forwardTestStartDate = rawForwardTransactions[0].openTime.toISOString().split('T')[0]
-
       // Analyze forward test volumes
-      const forwardVolumes = rawForwardTransactions.map((tx: any) => tx.volume)
-      const avgForwardVolume = forwardVolumes.reduce((sum: number, v: number) => sum + v, 0) / forwardVolumes.length
+      const forwardVolumes = forwardTransactions.map(tx => tx.volume)
+      const avgForwardVolume = forwardVolumes.reduce((sum, v) => sum + v, 0) / forwardVolumes.length
 
       // Calculate volume scale factor to match backtest position sizes
       const volumeScaleFactor = avgBacktestVolume / avgForwardVolume
@@ -205,7 +105,7 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
       )
 
       // Scale BOTH volume and profit to match backtest position sizes
-      scaledForwardTransactions = rawForwardTransactions.map((tx: any) => ({
+      scaledForwardTransactions = forwardTransactions.map(tx => ({
         ...tx,
         volume: tx.volume * volumeScaleFactor, // Scale volume to match backtest
         profit: tx.profit * volumeScaleFactor, // Profit scales with volume
@@ -219,7 +119,7 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
     }
 
     // STEP 3: Merge backtest (normalized) + forward test (scaled to match)
-    const backtestNormalized = backtestTransactions.map((tx) => ({
+    const backtestNormalized = backtestTransactions.map(tx => ({
       ...tx,
       profit: tx.profit * backtestScaleFactor,
       commission: tx.commission * backtestScaleFactor,
@@ -250,18 +150,26 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
     // Normalize statistics
     const normalizedStats = normalizeStatistics(stats, actualScaleFactor)
 
-    // Get symbol and timeframe from Excel metadata (these are metadata, not calculations)
-    const symbol = backtest.summary.symbol || 'XAUUSD'
-    const timeframe = backtest.summary.period || 'H1'
+    // Parse stored metrics for totalTrades and winRate (these are position-based from Excel)
+    let totalTrades = stats.totalTrades
+    let winRate = stats.winRate
+
+    try {
+      const backtestMetrics = JSON.parse(dbStrategy.backtestMetrics)
+      if (backtestMetrics.totalTrades) totalTrades = backtestMetrics.totalTrades
+      if (backtestMetrics.winRate !== undefined) winRate = backtestMetrics.winRate
+    } catch (error) {
+      console.warn(`Failed to parse backtest metrics for strategy ${magicNumber}:`, error)
+    }
 
     strategies.push({
       magicNumber,
-      name: getStrategyName(magicNumber, strategyNames, backtest.metadata.customComment),
-      symbol,
-      timeframe,
+      name: dbStrategy.name,
+      symbol: dbStrategy.symbol,
+      timeframe: dbStrategy.timeframe,
       totalProfit: normalizedStats.totalNetProfit,
-      totalTrades: backtest.summary.totalTrades, // Use Excel position count
-      winRate: backtest.summary.winRate, // Use Excel position-based winRate
+      totalTrades, // Use Excel position count from stored metrics
+      winRate, // Use Excel position-based winRate from stored metrics
       profitFactor: normalizedStats.profitFactor,
       maxDrawdown: targetDrawdown, // Normalized to $1000
       maxDrawdownPercent: normalizedStats.maxDrawdownPercent,
@@ -272,6 +180,8 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
       forwardTestStartDate,
     })
   }
+
+  console.log(`Loaded ${strategies.length} strategies from database`)
 
   return strategies
 }
