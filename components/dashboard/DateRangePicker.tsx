@@ -1,6 +1,6 @@
 'use client'
 
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar } from 'lucide-react'
 
 export type DateRange = {
   startDate: string // ISO date string YYYY-MM-DD
@@ -89,7 +89,7 @@ export function DateRangePicker({
 
   return (
     <div className="card">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="flex flex-col gap-4">
         {/* Date Inputs */}
         <div className="flex flex-col gap-2">
           <span className="text-xs sm:text-sm font-display font-semibold text-text-primary">
@@ -125,43 +125,24 @@ export function DateRangePicker({
           </div>
         </div>
 
-        {/* Quick Select Buttons - Horizontal scrollable on mobile with visual hints */}
-        <div className="relative">
-          {/* Subtle label for clarity - helps users understand what these buttons do */}
-          <div className="text-[10px] uppercase tracking-wide text-text-muted mb-1.5 sm:hidden font-display">
-            Swipe to select period →
-          </div>
-
-          {/* Shadow-based scroll indicators with arrow icons */}
-          <div className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none sm:hidden" style={{ background: 'linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0))' }}>
-            <div className="absolute left-1 top-1/2 -translate-y-1/2">
-              <ChevronLeft className="h-4 w-4 text-deus-gray/50" aria-hidden="true" />
-            </div>
-          </div>
-          <div className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none sm:hidden" style={{ background: 'linear-gradient(to left, rgba(255,255,255,1), rgba(255,255,255,0))' }}>
-            <div className="absolute right-1 top-1/2 -translate-y-1/2">
-              <ChevronRight className="h-4 w-4 text-deus-gray/50" aria-hidden="true" />
-            </div>
-          </div>
-
-          <div className="flex overflow-x-auto items-center gap-2 pb-2 sm:pb-0 sm:flex-wrap scrollbar-hide snap-x snap-mandatory" role="tablist" aria-label="Time period selection">
-            {periods.map((period) => (
-              <button
-                key={period}
-                onClick={() => handleQuickSelect(period)}
-                className={`
-                  flex-shrink-0 snap-center px-4 py-2 rounded-md text-sm font-display font-medium transition-all
-                  ${
-                    activePeriod === period
-                      ? 'bg-deus-gray text-white shadow-md'
-                      : 'bg-white text-text-secondary border border-border-default hover:bg-bg-secondary hover:border-deus-gray'
-                  }
-                `}
-              >
-                {period}
-              </button>
-            ))}
-          </div>
+        {/* Quick Select Buttons - responsive: 1 row on large screens, 2 rows on small screens */}
+        <div className="grid grid-cols-4 lg:grid-cols-8 gap-2" role="tablist" aria-label="Time period selection">
+          {periods.map((period) => (
+            <button
+              key={period}
+              onClick={() => handleQuickSelect(period)}
+              className={`
+                px-3 py-2 rounded-md text-sm font-display font-medium transition-all
+                ${
+                  activePeriod === period
+                    ? 'bg-deus-gray text-white shadow-md'
+                    : 'bg-white text-text-secondary border border-border-default hover:bg-bg-secondary hover:border-deus-gray'
+                }
+              `}
+            >
+              {period}
+            </button>
+          ))}
         </div>
       </div>
     </div>

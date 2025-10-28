@@ -172,17 +172,9 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
     // Normalize statistics
     const normalizedStats = normalizeStatistics(stats, actualScaleFactor)
 
-    // Parse stored metrics for totalTrades and winRate (these are position-based from Excel)
-    let totalTrades = stats.totalTrades
-    let winRate = stats.winRate
-
-    try {
-      const backtestMetrics = JSON.parse(dbStrategy.backtestMetrics)
-      if (backtestMetrics.totalTrades) totalTrades = backtestMetrics.totalTrades
-      if (backtestMetrics.winRate !== undefined) winRate = backtestMetrics.winRate
-    } catch (error) {
-      console.warn(`Failed to parse backtest metrics for strategy ${magicNumber}:`, error)
-    }
+    // Use calculated statistics (these are based on actual transactions)
+    const totalTrades = stats.totalTrades
+    const winRate = stats.winRate
 
     strategies.push({
       magicNumber,

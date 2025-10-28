@@ -126,8 +126,6 @@ export function StrategyTable({
                 <td>
                   <Link
                     href={`/dashboard/strategy/${strategy.magicNumber}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-accent-info hover:text-blue-700 hover:underline transition-colors min-h-[44px]"
                     title="View Strategy Report"
                   >

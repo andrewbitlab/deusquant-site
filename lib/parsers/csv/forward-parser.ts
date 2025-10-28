@@ -39,6 +39,8 @@ export class ForwardCSVParser {
     const magicIdx = getColumnIndex('magic')
     const openDateIdx = getColumnIndex('open date')
     const openTimeIdx = getColumnIndex('open time')
+    const closeDateIdx = getColumnIndex('close date')
+    const closeTimeIdx = getColumnIndex('close time')
     const buyOrSellIdx = getColumnIndex('buy/sell')
     const symbolIdx = getColumnIndex('symbol')
     const lotsIdx = getColumnIndex('lots')
@@ -62,27 +64,48 @@ export class ForwardCSVParser {
         const magicNumber = parseInt(columns[magicIdx]?.trim() || '0')
         if (!magicNumber || magicNumber === 0) continue
 
-        // Parse date
-        const dateStr = columns[openDateIdx]?.trim() || ''
-        const timeStr = columns[openTimeIdx]?.trim() || '00:00:00'
+        // Parse open date/time
+        const openDateStr = columns[openDateIdx]?.trim() || ''
+        const openTimeStr = columns[openTimeIdx]?.trim() || '00:00:00'
 
-        let date: Date
+        let openDate: Date
         try {
-          const [year, month, day] = dateStr.split('/')
-          date = new Date(`${year}-${month}-${day}T${timeStr}`)
+          const [year, month, day] = openDateStr.split('/')
+          openDate = new Date(`${year}-${month}-${day}T${openTimeStr}`)
 
-          if (isNaN(date.getTime())) {
-            date = new Date(dateStr.replace(/\//g, '-'))
+          if (isNaN(openDate.getTime())) {
+            openDate = new Date(openDateStr.replace(/\//g, '-'))
           }
 
-          if (isNaN(date.getTime())) continue
+          if (isNaN(openDate.getTime())) continue
         } catch {
           continue
         }
 
-        // Track date range
-        if (!minDate || date < minDate) minDate = date
-        if (!maxDate || date > maxDate) maxDate = date
+        // Parse close date/time
+        const closeDateStr = columns[closeDateIdx]?.trim() || ''
+        const closeTimeStr = columns[closeTimeIdx]?.trim() || '00:00:00'
+
+        let closeDate: Date | undefined
+        try {
+          const [year, month, day] = closeDateStr.split('/')
+          closeDate = new Date(`${year}-${month}-${day}T${closeTimeStr}`)
+
+          if (isNaN(closeDate.getTime())) {
+            closeDate = new Date(closeDateStr.replace(/\//g, '-'))
+          }
+
+          // Check if this is an open position (1970/01/01)
+          if (closeDate.getFullYear() === 1970) {
+            closeDate = undefined
+          }
+        } catch {
+          closeDate = undefined
+        }
+
+        // Track date range (use open date for range)
+        if (!minDate || openDate < minDate) minDate = openDate
+        if (!maxDate || openDate > maxDate) maxDate = openDate
 
         // Parse trade type
         const buyOrSell = columns[buyOrSellIdx]?.toLowerCase() || ''
@@ -97,8 +120,8 @@ export class ForwardCSVParser {
         const transaction: MT5Transaction = {
           id: parseInt(columns[ticketIdx]?.trim() || '0'),
           type: tradeType,
-          openTime: date,
-          closeTime: date,
+          openTime: openDate,
+          closeTime: closeDate, // Can be undefined for open positions
           symbol: columns[symbolIdx]?.trim() || '',
           volume: parseNumber(columns[lotsIdx]),
           openPrice: parseNumber(columns[openPriceIdx]),
