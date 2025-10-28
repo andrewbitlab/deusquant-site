@@ -198,6 +198,34 @@ function parseMetrics(html: string): PerformanceMetrics {
     return { value, percent }
   }
 
+  // Helper to extract number with value in parentheses (without % sign)
+  // Format: <b>3 (450.00)</b> where 3 is count and 450.00 is dollars
+  const extractNumberWithDollars = (label: string): { count: number; dollars: number } => {
+    const escapedLabel = label
+      .replace(/ą/g, '.*?')
+      .replace(/ć/g, '.*?')
+      .replace(/ę/g, '.*?')
+      .replace(/ł/g, '.*?')
+      .replace(/ń/g, '.*?')
+      .replace(/ó/g, '.*?')
+      .replace(/ś/g, '.*?')
+      .replace(/ź/g, '.*?')
+      .replace(/ż/g, '.*?')
+
+    const regex = new RegExp(
+      `${escapedLabel}[\\s\\S]*?<b>([0-9.,\\s-]+)\\s*\\(([0-9.,\\s-]+)\\)<\\/b>`,
+      'i'
+    )
+    const match = html.match(regex)
+
+    if (!match) return { count: 0, dollars: 0 }
+
+    const count = parseFloat(match[1].replace(/\s/g, '').replace(',', '.')) || 0
+    const dollars = parseFloat(match[2].replace(/\s/g, '').replace(',', '.')) || 0
+
+    return { count, dollars }
+  }
+
   // Helper to extract time value
   const extractTime = (label: string): string => {
     const regex = new RegExp(`${label}[\\s\\S]*?<b>([0-9:]+)<\\/b>`, 'i')
@@ -265,14 +293,14 @@ function parseMetrics(html: string): PerformanceMetrics {
     largestLossTrade: extractNumber('Najwi.*?ksz.*? stratn.*? transakcj.*?'),
     averageProfitTrade: extractNumber('.*?rednia zyskown.*? transakcj.*?'),
     averageLossTrade: extractNumber('.*?rednia stratn.*? transakcj.*?'),
-    maxConsecutiveWins: Math.round(extractNumberWithPercent('Maksimum kolejne wygrane').value),
-    maxConsecutiveWinsDollars: extractNumberWithPercent('Maksimum kolejne wygrane').percent, // Actually dollars
-    maxConsecutiveLosses: Math.round(extractNumberWithPercent('Maksimum kolejne straty').value),
-    maxConsecutiveLossesDollars: extractNumberWithPercent('Maksimum kolejne straty').percent, // Actually dollars
-    maxProfitDollars: extractNumberWithPercent('Maksimum zysk').value,
-    maxProfitCount: Math.round(extractNumberWithPercent('Maksimum zysk').percent), // Actually count
-    maxLossDollars: extractNumberWithPercent('Maksimum straty').value,
-    maxLossCount: Math.round(extractNumberWithPercent('Maksimum straty').percent), // Actually count
+    maxConsecutiveWins: Math.round(extractNumberWithDollars('Maksimum kolejne wygrane').count),
+    maxConsecutiveWinsDollars: extractNumberWithDollars('Maksimum kolejne wygrane').dollars,
+    maxConsecutiveLosses: Math.round(extractNumberWithDollars('Maksimum kolejne straty').count),
+    maxConsecutiveLossesDollars: extractNumberWithDollars('Maksimum kolejne straty').dollars,
+    maxProfitDollars: extractNumberWithDollars('Maksimum zysk').dollars,
+    maxProfitCount: Math.round(extractNumberWithDollars('Maksimum zysk').count),
+    maxLossDollars: extractNumberWithDollars('Maksimum straty').dollars,
+    maxLossCount: Math.round(extractNumberWithDollars('Maksimum straty').count),
     averageConsecutiveWins: extractNumber('.*?rednia kolejne wygrane'),
     averageConsecutiveLosses: extractNumber('.*?rednia kolejne straty'),
 
@@ -298,9 +326,12 @@ function parseChartData(html: string, magicNumber: string): ChartData {
   return {
     equityCurve: [],
     drawdown: [],
-    maemfe: [],
     profitDistribution: [],
     holdingTime: [],
+    hourlyDistribution: [],
+    dailyDistribution: [],
+    monthlyDistribution: [],
+    holdingTimeScatter: [],
   }
 }
 
