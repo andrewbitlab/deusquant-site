@@ -20,14 +20,15 @@ export function LoadingScreen() {
       <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 4rem)' }}>
         <div className="flex flex-col items-center gap-4">
           <div className="relative w-16 h-16">
-            {/* Spinning logo sun */}
+            {/* Spinning logo sun - optimized WebP version */}
             <Image
-              src="/images/logo-sun-small.png"
+              src="/images/logo-sun-small.webp"
               alt="Loading"
               width={64}
               height={64}
               className="animate-spin"
               style={{ animationDuration: '2s' }}
+              priority
             />
           </div>
           <p className="text-text-secondary text-sm">Loading portfolio data...</p>

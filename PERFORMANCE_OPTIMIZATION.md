@@ -49,10 +49,11 @@ Comprehensive performance optimization implementation for the DEUS QUANT portfol
 - compress: true // Enable gzip/brotli
 - images.formats: ['image/webp', 'image/avif'] // Modern formats
 - images.minimumCacheTTL: 31536000 // 1 year cache
-- experimental.optimizeCss: true // CSS optimization
 - experimental.optimizePackageImports: [...] // Tree-shaking
 - output: 'standalone' // Production optimization
 ```
+
+**Note**: `experimental.optimizeCss` was removed due to missing `critters` dependency causing build errors.
 
 ### 6. Bundle Analysis
 - Installed `@next/bundle-analyzer`
