@@ -13,6 +13,15 @@
 [functions]
   directory = ".netlify/functions"
   node_bundler = "esbuild"
+  # Include data files in serverless functions
+  included_files = ["data/**"]
+  # External node modules to reduce bundle size
+  external_node_modules = ["xlsx"]
+
+# Specific configuration for Next.js server handler
+[functions."___netlify-server-handler"]
+  # Include all data files
+  included_files = ["data/**/*.xlsx", "data/**/*.csv"]
 
 # Headers for security and caching
 [[headers]]

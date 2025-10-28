@@ -25,9 +25,6 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['recharts', 'lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
   },
-
-  // Output configuration for production
-  output: 'standalone',
 }
 
 module.exports = withBundleAnalyzer(nextConfig)
