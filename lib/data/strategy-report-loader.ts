@@ -61,7 +61,7 @@ export async function loadStrategyReport(magicNumber: string): Promise<StrategyR
 
 /**
  * Calculate hourly distribution of trades and P&L
- * Converts UTC to broker time (UTC+2)
+ * Database already stores time in broker timezone (UTC+2)
  */
 function calculateHourlyDistribution(trades: Transaction[]): import('../types/strategy-report').TimeDistribution[] {
   const hourlyData: { [hour: number]: { entries: number; profit: number; loss: number } } = {}
@@ -71,15 +71,14 @@ function calculateHourlyDistribution(trades: Transaction[]): import('../types/st
     hourlyData[i] = { entries: 0, profit: 0, loss: 0 }
   }
 
-  // Count entries and P&L by hour (convert UTC to UTC+2 broker time)
+  // Count entries and P&L by hour
   for (const trade of trades) {
-    const utcHour = trade.openTime.getUTCHours()
-    const brokerHour = (utcHour + 2) % 24 // Convert UTC to UTC+2
-    hourlyData[brokerHour].entries++
+    const hour = trade.openTime.getHours()
+    hourlyData[hour].entries++
     if (trade.profit > 0) {
-      hourlyData[brokerHour].profit += trade.profit
+      hourlyData[hour].profit += trade.profit
     } else {
-      hourlyData[brokerHour].loss += trade.profit
+      hourlyData[hour].loss += trade.profit
     }
   }
 
@@ -95,7 +94,7 @@ function calculateHourlyDistribution(trades: Transaction[]): import('../types/st
 
 /**
  * Calculate daily distribution (by day of week)
- * Converts UTC to broker time (UTC+2)
+ * Database already stores time in broker timezone (UTC+2)
  */
 function calculateDailyDistribution(trades: Transaction[]): import('../types/strategy-report').TimeDistribution[] {
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -106,11 +105,9 @@ function calculateDailyDistribution(trades: Transaction[]): import('../types/str
     dailyData[i] = { entries: 0, profit: 0, loss: 0 }
   }
 
-  // Count entries and P&L by day of week (convert UTC to UTC+2 broker time)
+  // Count entries and P&L by day of week
   for (const trade of trades) {
-    // Create date in broker time (UTC+2)
-    const brokerTime = new Date(trade.openTime.getTime() + 2 * 60 * 60 * 1000)
-    const day = brokerTime.getUTCDay()
+    const day = trade.openTime.getDay()
     dailyData[day].entries++
     if (trade.profit > 0) {
       dailyData[day].profit += trade.profit
@@ -131,7 +128,7 @@ function calculateDailyDistribution(trades: Transaction[]): import('../types/str
 
 /**
  * Calculate monthly distribution
- * Converts UTC to broker time (UTC+2)
+ * Database already stores time in broker timezone (UTC+2)
  */
 function calculateMonthlyDistribution(trades: Transaction[]): import('../types/strategy-report').TimeDistribution[] {
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -142,11 +139,9 @@ function calculateMonthlyDistribution(trades: Transaction[]): import('../types/s
     monthlyData[i] = { entries: 0, profit: 0, loss: 0 }
   }
 
-  // Count entries and P&L by month (convert UTC to UTC+2 broker time)
+  // Count entries and P&L by month
   for (const trade of trades) {
-    // Create date in broker time (UTC+2)
-    const brokerTime = new Date(trade.openTime.getTime() + 2 * 60 * 60 * 1000)
-    const month = brokerTime.getUTCMonth()
+    const month = trade.openTime.getMonth()
     monthlyData[month].entries++
     if (trade.profit > 0) {
       monthlyData[month].profit += trade.profit
