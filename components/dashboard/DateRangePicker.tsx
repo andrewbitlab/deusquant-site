@@ -1,6 +1,6 @@
 'use client'
 
-import { Calendar } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export type DateRange = {
   startDate: string // ISO date string YYYY-MM-DD
@@ -89,58 +89,79 @@ export function DateRangePicker({
 
   return (
     <div className="card">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         {/* Date Inputs */}
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-display font-semibold text-text-primary">
+        <div className="flex flex-col gap-2">
+          <span className="text-xs sm:text-sm font-display font-semibold text-text-primary">
             Date range
           </span>
 
-          <div className="relative">
-            <input
-              type="date"
-              value={dateRange.startDate}
-              onChange={handleStartDateChange}
-              min={minDate}
-              max={dateRange.endDate}
-              className="input-deus pl-10 text-sm w-40"
-            />
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
-          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="relative flex-shrink-0">
+              <input
+                type="date"
+                value={dateRange.startDate}
+                onChange={handleStartDateChange}
+                min={minDate}
+                max={dateRange.endDate}
+                className="input-deus pl-8 sm:pl-10 text-xs sm:text-sm w-[130px] sm:w-36 md:w-40"
+              />
+              <Calendar className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-text-muted pointer-events-none" />
+            </div>
 
-          <span className="text-sm text-text-muted">-</span>
+            <span className="text-xs sm:text-sm text-text-muted flex-shrink-0">-</span>
 
-          <div className="relative">
-            <input
-              type="date"
-              value={dateRange.endDate}
-              onChange={handleEndDateChange}
-              min={dateRange.startDate}
-              max={maxDate}
-              className="input-deus pl-10 text-sm w-40"
-            />
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
+            <div className="relative flex-shrink-0">
+              <input
+                type="date"
+                value={dateRange.endDate}
+                onChange={handleEndDateChange}
+                min={dateRange.startDate}
+                max={maxDate}
+                className="input-deus pl-8 sm:pl-10 text-xs sm:text-sm w-[130px] sm:w-36 md:w-40"
+              />
+              <Calendar className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-text-muted pointer-events-none" />
+            </div>
           </div>
         </div>
 
-        {/* Quick Select Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          {periods.map((period) => (
-            <button
-              key={period}
-              onClick={() => handleQuickSelect(period)}
-              className={`
-                px-4 py-2 rounded-md text-sm font-display font-medium transition-all
-                ${
-                  activePeriod === period
-                    ? 'bg-deus-gray text-white shadow-md'
-                    : 'bg-white text-text-secondary border border-border-default hover:bg-bg-secondary hover:border-deus-gray'
-                }
-              `}
-            >
-              {period}
-            </button>
-          ))}
+        {/* Quick Select Buttons - Horizontal scrollable on mobile with visual hints */}
+        <div className="relative">
+          {/* Subtle label for clarity - helps users understand what these buttons do */}
+          <div className="text-[10px] uppercase tracking-wide text-text-muted mb-1.5 sm:hidden font-display">
+            Swipe to select period →
+          </div>
+
+          {/* Shadow-based scroll indicators with arrow icons */}
+          <div className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none sm:hidden" style={{ background: 'linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0))' }}>
+            <div className="absolute left-1 top-1/2 -translate-y-1/2">
+              <ChevronLeft className="h-4 w-4 text-deus-gray/50" aria-hidden="true" />
+            </div>
+          </div>
+          <div className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none sm:hidden" style={{ background: 'linear-gradient(to left, rgba(255,255,255,1), rgba(255,255,255,0))' }}>
+            <div className="absolute right-1 top-1/2 -translate-y-1/2">
+              <ChevronRight className="h-4 w-4 text-deus-gray/50" aria-hidden="true" />
+            </div>
+          </div>
+
+          <div className="flex overflow-x-auto items-center gap-2 pb-2 sm:pb-0 sm:flex-wrap scrollbar-hide snap-x snap-mandatory" role="tablist" aria-label="Time period selection">
+            {periods.map((period) => (
+              <button
+                key={period}
+                onClick={() => handleQuickSelect(period)}
+                className={`
+                  flex-shrink-0 snap-center px-4 py-2 rounded-md text-sm font-display font-medium transition-all
+                  ${
+                    activePeriod === period
+                      ? 'bg-deus-gray text-white shadow-md'
+                      : 'bg-white text-text-secondary border border-border-default hover:bg-bg-secondary hover:border-deus-gray'
+                  }
+                `}
+              >
+                {period}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

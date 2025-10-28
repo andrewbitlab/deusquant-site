@@ -1,5 +1,7 @@
 'use client'
 
+import { TrendingUp, BarChart3, AlertTriangle, Target, Award, Users } from 'lucide-react'
+
 interface Stat {
   label: string
   value: string | number
@@ -47,12 +49,33 @@ export function StatsPanel({ stats }: StatsPanelProps) {
   // Check if any stat has compoundedValue to show legend
   const hasCompoundedValues = stats.some(stat => stat.compoundedValue !== undefined)
 
+  // Get appropriate icon for each stat
+  const getStatIcon = (label: string) => {
+    if (label.includes('Total Profit')) return TrendingUp
+    if (label.includes('Monthly Profit')) return BarChart3
+    if (label.includes('Max Drawdown')) return AlertTriangle
+    if (label.includes('Sharpe Ratio')) return Target
+    if (label.includes('Calmar Ratio')) return Award
+    if (label.includes('Strategies')) return Users
+    return null
+  }
+
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        {stats.map((stat, i) => (
-          <div key={i} className="card flex flex-col">
-            <div className="stat-label h-12 flex items-start">{stat.label}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        {stats.map((stat, i) => {
+          const Icon = getStatIcon(stat.label)
+          return (
+            <div key={i} className="card flex flex-col">
+              <div className="stat-label h-10 sm:h-12 flex items-start gap-2 text-xs sm:text-sm">
+                {Icon && (
+                  <Icon
+                    className="h-4 w-4 text-deus-gray/50 flex-shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  />
+                )}
+                <span>{stat.label}</span>
+              </div>
             {typeof stat.value === 'string' ? (
               <div className={`stat-value ${getValueColor(stat)}`}>{stat.value}</div>
             ) : stat.compoundedValue !== undefined ? (
@@ -79,11 +102,12 @@ export function StatsPanel({ stats }: StatsPanelProps) {
                 {stat.change.toFixed(2)}%
               </div>
             )}
-          </div>
-        ))}
+            </div>
+          )
+        })}
       </div>
       {hasCompoundedValues && (
-        <div className="mt-2 text-sm text-text-secondary text-center">
+        <div className="mt-2 text-xs sm:text-sm text-text-secondary text-center px-2">
           Values shown as: <span className="font-semibold">Fixed Position</span> (top) / <span className="font-semibold">Monthly Compounding</span> (bottom)
         </div>
       )}

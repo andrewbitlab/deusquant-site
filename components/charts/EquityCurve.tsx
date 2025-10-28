@@ -84,9 +84,17 @@ export function EquityCurve({
   const yAxisTicks = yAxisConfig.ticks
 
   return (
-    <div className="w-full h-[400px]">
-      <ResponsiveContainer width="100%" height={400}>
-        <ComposedChart data={data} margin={{ top: 30, right: 30, left: 20, bottom: 0 }}>
+    <div className="w-full h-[280px] sm:h-[320px] md:h-[400px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart
+          data={data}
+          margin={{
+            top: typeof window !== 'undefined' && window.innerWidth < 640 ? 20 : 30,
+            right: typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 30,
+            left: typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 20,
+            bottom: 0
+          }}
+        >
           <defs>
             <linearGradient id="drawdownGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3} />
@@ -103,7 +111,7 @@ export function EquityCurve({
           <XAxis
             dataKey="date"
             stroke="#a0a3a9"
-            tick={{ fill: '#7a7d84', fontSize: 12 }}
+            tick={{ fill: '#7a7d84', fontSize: typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 12 }}
             tickFormatter={(value) => {
               // Format as MM.YYYY (Polish format without day)
               const date = new Date(value)
@@ -115,7 +123,7 @@ export function EquityCurve({
 
           <YAxis
             stroke="#a0a3a9"
-            tick={{ fill: '#7a7d84', fontSize: 12 }}
+            tick={{ fill: '#7a7d84', fontSize: typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 12 }}
             tickFormatter={(value) =>
               isPercentage
                 ? `${value.toFixed(0)}%`

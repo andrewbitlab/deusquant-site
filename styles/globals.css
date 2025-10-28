@@ -47,7 +47,7 @@
   /* DEUS QUANT Custom Components */
 
   .card {
-    @apply bg-white rounded-lg border border-border-light shadow-deus-sm p-6;
+    @apply bg-white rounded-lg border border-border-light shadow-deus-sm p-4 sm:p-6;
   }
 
   .card-hover {
@@ -59,11 +59,11 @@
   }
 
   .stat-label {
-    @apply text-sm text-text-muted uppercase tracking-wide font-display;
+    @apply text-xs sm:text-sm text-text-muted uppercase tracking-wide font-display;
   }
 
   .stat-value {
-    @apply text-[22px] font-bold font-mono text-text-primary mt-2;
+    @apply text-lg md:text-[22px] font-bold font-mono text-text-primary mt-2;
   }
 
   .stat-change-positive {
@@ -87,7 +87,7 @@
   }
 
   .input-deus {
-    @apply w-full px-4 py-2 border border-border-default rounded-md
+    @apply w-full px-3 sm:px-4 py-2.5 md:py-2 border border-border-default rounded-md
            focus:outline-none focus:ring-2 focus:ring-deus-gray focus:border-transparent
            text-text-primary placeholder-text-muted;
   }
@@ -225,4 +225,17 @@
 
 .animate-radial-pulse {
   animation: radialPulse 2s ease-in-out infinite;
+}
+
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
 }

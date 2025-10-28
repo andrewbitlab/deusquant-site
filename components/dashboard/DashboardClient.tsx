@@ -588,13 +588,13 @@ function DashboardClientComponent({ strategies }: DashboardClientProps) {
   }))
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-bold text-deus-gray mb-2">
-          Portfolio Dashboard
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-deus-gray mb-2">
+          Trading Portfolio Performance
         </h1>
-        <p className="text-text-secondary">
-          {strategies.length} trading strategies loaded from backtest + live data
+        <p className="text-sm sm:text-base text-text-secondary">
+          Real-time performance metrics and profit curves for {strategies.length} active trading strategies
         </p>
       </div>
 
@@ -608,26 +608,33 @@ function DashboardClientComponent({ strategies }: DashboardClientProps) {
 
       <StatsPanel stats={portfolioData.stats} />
 
-      <div className="card">
-        <h2 className="font-display text-xl font-semibold mb-4 text-deus-gray">
-          Portfolio Profit Curve (%)
-          {portfolioData.forwardTestStartDate && (
-            <span className="ml-3 text-sm font-normal text-text-secondary">
-              (Includes live data from {portfolioData.forwardTestStartDate})
-            </span>
-          )}
-        </h2>
-        <EquityCurve
-          data={portfolioData.normalizedProfitCurve.map((p, i) => ({
-            date: p.date,
-            equity: p.profit, // Already in percentage terms, normalized to 0%
-            equityCompounded: portfolioData.compoundedNormalizedCurve[i]?.profit, // Compounded profit
-            drawdown: -p.drawdown, // Negative so it displays below axis
-          }))}
-          showDrawdown={true}
-          forwardTestStartDate={portfolioData.forwardTestStartDate}
-          isPercentage={true}
-        />
+      <div>
+        <div className="mb-4">
+          <h2 className="text-lg sm:text-xl font-display font-semibold text-text-primary">
+            Profit Curve Over Time
+          </h2>
+          <p className="text-xs sm:text-sm text-text-secondary mt-1">
+            Cumulative profit showing both fixed position sizing and monthly compounding
+            {portfolioData.forwardTestStartDate && (
+              <span className="ml-1">
+                (includes live data from {portfolioData.forwardTestStartDate})
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="card">
+          <EquityCurve
+            data={portfolioData.normalizedProfitCurve.map((p, i) => ({
+              date: p.date,
+              equity: p.profit, // Already in percentage terms, normalized to 0%
+              equityCompounded: portfolioData.compoundedNormalizedCurve[i]?.profit, // Compounded profit
+              drawdown: -p.drawdown, // Negative so it displays below axis
+            }))}
+            showDrawdown={true}
+            forwardTestStartDate={portfolioData.forwardTestStartDate}
+            isPercentage={true}
+          />
+        </div>
       </div>
 
       <div>

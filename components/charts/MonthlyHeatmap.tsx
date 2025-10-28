@@ -15,11 +15,11 @@ export function MonthlyHeatmap({ data }: MonthlyHeatmapProps) {
   return (
     <div className="card">
       <h3 className="font-display text-lg font-semibold mb-4">Monthly Returns</h3>
-      <div className="grid grid-cols-12 gap-2">
+      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-1 sm:gap-2">
         {Array.from(data.entries()).slice(0, 60).map(([month, return_]) => (
           <div
             key={month}
-            className={`${getColor(return_)} text-white text-xs p-2 rounded text-center`}
+            className={`${getColor(return_)} text-white text-[10px] sm:text-xs p-2 rounded text-center`}
             title={`${month}: ${return_.toFixed(2)}%`}
           >
             {return_.toFixed(1)}%

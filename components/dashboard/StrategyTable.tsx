@@ -67,13 +67,13 @@ export function StrategyTable({
   return (
     <div className="card overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="table-deus">
+        <table className="table-deus min-w-[800px] lg:min-w-full">
           <thead>
             <tr>
-              <th>
+              <th className="p-2">
                 <input
                   type="checkbox"
-                  className="rounded"
+                  className="rounded p-2"
                   checked={allSelected}
                   ref={(input) => {
                     if (input) {
@@ -81,26 +81,27 @@ export function StrategyTable({
                     }
                   }}
                   onChange={toggleSelectAll}
+                  aria-label="Select all strategies"
                 />
               </th>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Symbol</th>
-              <th>Total Profit</th>
-              <th>Win Rate</th>
-              <th>Max DD</th>
-              <th>Sharpe</th>
-              <th>Report</th>
-              <th>Status</th>
+              <th title="Strategy identification number">ID</th>
+              <th title="Strategy name">Name</th>
+              <th title="Trading pair or instrument">Symbol</th>
+              <th title="Total profit/loss in dollars over the test period">Total Profit</th>
+              <th title="Percentage of winning trades">Win Rate</th>
+              <th title="Maximum peak-to-trough decline in dollars">Max DD</th>
+              <th title="Risk-adjusted return ratio (higher is better)">Sharpe</th>
+              <th title="View detailed backtest analysis">Report</th>
+              <th title="Trading status: Active (live) or Backtest Only">Status</th>
             </tr>
           </thead>
           <tbody>
             {strategies.map((strategy) => (
               <tr key={strategy.id}>
-                <td>
+                <td className="p-2">
                   <input
                     type="checkbox"
-                    className="rounded"
+                    className="rounded p-2"
                     checked={selected.has(strategy.id)}
                     onChange={() => toggleSelection(strategy.id)}
                   />
@@ -127,7 +128,7 @@ export function StrategyTable({
                     href={`/dashboard/backtest/${strategy.magicNumber}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-info hover:text-blue-700 hover:underline transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-accent-info hover:text-blue-700 hover:underline transition-colors min-h-[44px]"
                     title="View Backtest Report"
                   >
                     <svg

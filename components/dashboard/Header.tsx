@@ -70,13 +70,13 @@ export function DashboardHeader({ lastTransactionDate }: DashboardHeaderProps) {
   return (
     <>
       <header className="border-b border-border-light bg-white">
-        <div className="container mx-auto flex h-16 items-center justify-between px-6">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
           <Logo />
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
             <div className="text-sm">
-              <span className="text-text-muted">Last Update:</span>
-              <span className="ml-2 font-mono text-text-primary">
+              <span className="text-text-muted hidden sm:inline">Last Update:</span>
+              <span className="ml-0 sm:ml-2 font-mono text-text-primary text-xs sm:text-sm">
                 {displayDate || '—'}
               </span>
             </div>
@@ -98,7 +98,7 @@ export function DashboardHeader({ lastTransactionDate }: DashboardHeaderProps) {
 
       {/* Toast Notification */}
       {message && (
-        <div className="fixed top-20 right-6 z-50 animate-in slide-in-from-top-2">
+        <div className="fixed top-20 right-4 md:right-6 z-50 animate-in slide-in-from-top-2 max-w-[calc(100vw-2rem)] sm:max-w-md">
           <div
             className={`px-4 py-3 rounded-lg shadow-lg border ${
               message.type === 'success'
