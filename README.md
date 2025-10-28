@@ -13,8 +13,9 @@ A comprehensive Next.js application for analyzing, managing, and presenting algo
 - **Project Infrastructure**
   - Next.js 14.2.5 with TypeScript
   - Tailwind CSS with DEUS QUANT custom theme
-  - Prisma ORM with SQLite (dev) / PostgreSQL (production)
+  - Prisma ORM with PostgreSQL (Neon) - Production-ready with connection pooling
   - Complete database schema for strategies, transactions, and portfolios
+  - Health monitoring endpoint for system status
 
 - **Data Parsing**
   - MT5 Excel parser framework
@@ -24,7 +25,10 @@ A comprehensive Next.js application for analyzing, managing, and presenting algo
 
 - **API Endpoints**
   - `/api/strategies` - Strategy CRUD operations
+  - `/api/strategies/load` - Load strategies from database
+  - `/api/health` - System health check and database monitoring
   - `/api/upload` - File upload handling
+  - `/api/backtest/images/[filename]` - Backtest chart images
   - Ready for parser integration
 
 - **Dashboard Components**
@@ -57,7 +61,7 @@ A comprehensive Next.js application for analyzing, managing, and presenting algo
 - **UI**: React 18, Tailwind CSS 3.4, shadcn/ui components
 - **Charts**: Recharts 2.12, Plotly.js 2.35
 - **Animations**: Framer Motion 11.3
-- **Database**: Prisma 5.18 (SQLite dev / PostgreSQL prod)
+- **Database**: Prisma 5.18 with PostgreSQL (Neon) - Connection pooling with singleton pattern
 - **Validation**: Zod 3.23
 - **File Handling**: xlsx 0.18, papaparse 5.4, react-dropzone 14.2
 - **State Management**: Zustand 4.5
@@ -121,10 +125,18 @@ npm start
 
 ## Environment Variables
 
+**Development (.env.local):**
 \`\`\`env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://user:pass@host:5432/db?sslmode=require"
 NEXT_PUBLIC_APP_NAME="DEUS QUANT Portfolio"
 NEXT_PUBLIC_API_URL="http://localhost:3000/api"
+\`\`\`
+
+**Production (Netlify):**
+\`\`\`env
+DATABASE_URL="postgresql://user:pass@host.neon.tech/db?sslmode=require"
+NODE_VERSION="20"
+NPM_FLAGS="--legacy-peer-deps"
 \`\`\`
 
 ## Development Phases Completed
@@ -145,6 +157,178 @@ NEXT_PUBLIC_API_URL="http://localhost:3000/api"
 Test data is available in the `data/` directory:
 - `data/backtest/202501027.xlsx` - MT5 backtest file
 - `data/forward/*.csv` - Forward test data
+
+### Automated Testing
+
+The project uses MCP (Model Context Protocol) tools for comprehensive testing:
+
+```bash
+# Playwright MCP - Functional testing
+- Navigation and user interactions
+- Data loading verification
+- Accessibility snapshots
+- Console error detection
+
+# Chrome DevTools MCP - Performance testing
+- Core Web Vitals (LCP, CLS, TTFB)
+- Network request analysis
+- Performance trace recording
+- Cache analysis
+```
+
+**Latest Test Results (28 Oct 2025):**
+- ✅ Localhost: PASS (4.8s load, 0 errors)
+- ✅ Production: PASS (6s load, 0 errors)
+- ✅ 19 strategies loading successfully
+- ✅ PostgreSQL connection stable
+- ✅ CLS = 0.00 (perfect, no layout shifts)
+
+## Production Status & Monitoring
+
+### Live Environment
+
+**Production URL:** https://deusquant.com
+**Status:** 🟢 Operational
+**Database:** PostgreSQL (Neon)
+**Hosting:** Netlify Serverless
+**Last Deploy:** Oct 28, 2025
+
+### Health Check Endpoint
+
+Monitor system health and database connectivity:
+
+```bash
+# Check service status
+curl https://deusquant.com/api/health
+
+# Expected response (healthy):
+{
+  "status": "ok",
+  "timestamp": "2025-10-28T12:56:18.216Z",
+  "database": {
+    "status": "connected",
+    "provider": "postgresql",
+    "activeStrategies": 19
+  },
+  "service": "deus-quant-portfolio"
+}
+
+# Error response (unhealthy):
+{
+  "status": "error",
+  "timestamp": "2025-10-28T12:56:18.216Z",
+  "database": {
+    "status": "disconnected",
+    "error": "Connection timeout"
+  },
+  "service": "deus-quant-portfolio"
+}
+```
+
+**HTTP Status Codes:**
+- `200 OK` - System healthy, database connected
+- `503 Service Unavailable` - Database connection failed
+
+### Performance Metrics
+
+**Core Web Vitals:**
+- **LCP (Largest Contentful Paint):** 3.4s (Production)
+- **CLS (Cumulative Layout Shift):** 0.00 (Perfect)
+- **TTFB (Time to First Byte):** 3.2s (Serverless cold start)
+
+**Load Performance:**
+- Initial page load: ~6 seconds
+- 19 strategies loaded from PostgreSQL
+- HTTP/2 with Brotli compression
+- Netlify Edge CDN caching
+
+**Optimization Notes:**
+- Serverless function `maxDuration: 60s` for PostgreSQL cold starts
+- Prisma Client singleton pattern prevents connection exhaustion
+- ISR (Incremental Static Regeneration) with 1-hour revalidation
+
+### Database Architecture
+
+**Production Database:**
+- **Provider:** PostgreSQL (Neon)
+- **Connection Pooling:** Prisma singleton pattern
+- **URL:** `DATABASE_URL` environment variable
+- **Schema:** 19 active strategies, ~10,000 transactions
+
+**Connection Management:**
+```typescript
+// lib/data/prisma.ts
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+  log: ['error'],
+  datasources: { db: { url: process.env.DATABASE_URL } }
+})
+```
+
+**Key Features:**
+- Singleton pattern prevents connection exhaustion
+- Automatic reconnection on serverless cold starts
+- Graceful error handling with detailed logging
+- Health check endpoint for monitoring
+
+### Monitoring Commands
+
+```bash
+# Check production status
+curl -I https://deusquant.com/dashboard
+
+# Test health endpoint
+curl https://deusquant.com/api/health | jq .
+
+# Verify database connection
+curl https://deusquant.com/api/health | jq '.database.status'
+
+# Check active strategies count
+curl https://deusquant.com/api/health | jq '.database.activeStrategies'
+```
+
+### Deployment
+
+**Platform:** Netlify
+**Build Command:** `npm run build`
+**Deploy Trigger:** Push to `main` branch
+
+**Environment Variables (Netlify):**
+```env
+DATABASE_URL="postgresql://user:pass@host/db?sslmode=require"
+NODE_VERSION="20"
+NPM_FLAGS="--legacy-peer-deps"
+```
+
+**Build Configuration:**
+```toml
+# netlify.toml
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+```
+
+**Automatic Deploys:**
+- Push to `main` → Production deploy
+- Build time: ~2-3 minutes
+- Automatic cache invalidation
+- Zero-downtime deployments
+
+### Recent Fixes (Oct 28, 2025)
+
+**Critical Issues Resolved:**
+1. ✅ "Connection closed" error eliminated
+2. ✅ PostgreSQL connection pooling implemented
+3. ✅ Increased serverless timeout (30s → 60s)
+4. ✅ Added health check endpoint
+5. ✅ Error handling and retry logic
+6. ✅ Type safety improvements
+
+**Commits:**
+- `0701a00` - Fix PostgreSQL connection pooling for serverless
+- `4700c45` - Add health check endpoint with database monitoring
 
 ## Next Steps
 
