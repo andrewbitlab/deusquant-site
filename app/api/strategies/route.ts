@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
 
     const strategy = await prisma.strategy.create({
       data: {
+        id: data.id || `strategy-${data.magicNumber}-${Date.now()}`,
         magicNumber: data.magicNumber,
         name: data.name,
         symbol: data.symbol,
@@ -32,6 +33,7 @@ export async function POST(request: NextRequest) {
         backtestMetrics: JSON.stringify(data.backtestMetrics),
         backtestEquity: JSON.stringify(data.backtestEquity),
         status: data.status || 'BACKTEST',
+        updatedAt: new Date(),
       },
     })
 

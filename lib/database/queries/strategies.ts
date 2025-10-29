@@ -12,7 +12,7 @@ export async function getStrategyByMagicNumber(magicNumber: number) {
   return prisma.strategy.findUnique({
     where: { magicNumber },
     include: {
-      transactions: {
+      Transaction: {
         orderBy: { openTime: 'asc' },
       },
     },
@@ -21,7 +21,11 @@ export async function getStrategyByMagicNumber(magicNumber: number) {
 
 export async function createStrategy(data: Omit<Strategy, 'id' | 'createdAt' | 'updatedAt'>) {
   return prisma.strategy.create({
-    data,
+    data: {
+      ...data,
+      id: `strategy-${data.magicNumber}-${Date.now()}`,
+      updatedAt: new Date(),
+    },
   })
 }
 

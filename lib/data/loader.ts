@@ -60,7 +60,7 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
         isActive: true,
       },
       include: {
-        transactions: {
+        Transaction: {
           orderBy: {
             openTime: 'asc',
           },
@@ -71,7 +71,7 @@ export async function getAllStrategies(): Promise<StrategyData[]> {
   const strategies: StrategyData[] = []
 
   for (const dbStrategy of dbStrategies) {
-    const transactions = dbStrategy.transactions
+    const transactions = dbStrategy.Transaction
 
     if (transactions.length === 0) {
       console.warn(`Strategy ${dbStrategy.magicNumber} has no transactions`)

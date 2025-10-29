@@ -30,7 +30,7 @@ export async function loadStrategyReport(magicNumber: string): Promise<StrategyR
   const strategy = await prisma.strategy.findUnique({
     where: { magicNumber: parseInt(magicNumber) },
     include: {
-      transactions: {
+      Transaction: {
         where: { isForwardTest: false },
         orderBy: { openTime: 'asc' },
       },
@@ -45,10 +45,10 @@ export async function loadStrategyReport(magicNumber: string): Promise<StrategyR
   const htmlData = await parseMT5HTMLReport(magicNumber)
 
   // 3. Calculate chart data from transactions (pass all transactions for MAE/MFE)
-  const charts = calculateChartData(strategy.transactions)
+  const charts = calculateChartData(strategy.Transaction)
 
   // 4. Build trades summary
-  const tradesSummary = buildTradesSummary(strategy.transactions)
+  const tradesSummary = buildTradesSummary(strategy.Transaction)
 
   // 5. Combine all data
   return {

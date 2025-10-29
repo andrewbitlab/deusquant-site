@@ -4,9 +4,9 @@ import type { Portfolio, PortfolioStrategy } from '@prisma/client'
 export async function getAllPortfolios() {
   return prisma.portfolio.findMany({
     include: {
-      strategies: {
+      PortfolioStrategy: {
         include: {
-          strategy: true,
+          Strategy: true,
         },
       },
     },
@@ -18,12 +18,12 @@ export async function getPortfolioById(id: string) {
   return prisma.portfolio.findUnique({
     where: { id },
     include: {
-      strategies: {
+      PortfolioStrategy: {
         where: { enabled: true },
         include: {
-          strategy: {
+          Strategy: {
             include: {
-              transactions: true,
+              Transaction: true,
             },
           },
         },
@@ -36,7 +36,11 @@ export async function createPortfolio(
   data: Omit<Portfolio, 'id' | 'createdAt' | 'updatedAt' | 'lastCalculated'>
 ) {
   return prisma.portfolio.create({
-    data,
+    data: {
+      ...data,
+      id: `portfolio-${Date.now()}`,
+      updatedAt: new Date(),
+    },
   })
 }
 
@@ -47,6 +51,7 @@ export async function addStrategyToPortfolio(
 ) {
   return prisma.portfolioStrategy.create({
     data: {
+      id: `ps-${portfolioId}-${strategyId}-${Date.now()}`,
       portfolioId,
       strategyId,
       weight,
