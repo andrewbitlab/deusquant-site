@@ -331,6 +331,7 @@ function parseChartData(html: string, magicNumber: string): ChartData {
     hourlyDistribution: [],
     dailyDistribution: [],
     monthlyDistribution: [],
+    yearlyDistribution: [],
     holdingTimeScatter: [],
   }
 }
