@@ -163,25 +163,50 @@ export function EquityCurve({
           />
 
           {/* Forward Test Period Marker */}
-          {forwardTestStartDate && (
-            <ReferenceLine
-              x={forwardTestStartDate}
-              stroke="#10b981"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              label={{
-                value: 'Live Data',
-                position: 'insideTopLeft',
-                fill: '#10b981',
-                fontSize: 12,
-                fontWeight: 600,
-                offset: 10,
-              }}
-            />
-          )}
+          {forwardTestStartDate && (() => {
+            // Check if the forward test line is outside the visible chart area (to the left)
+            const firstDataDate = data[0]?.date
+            const isLineOutsideChart = firstDataDate && forwardTestStartDate < firstDataDate
 
-          {/* Legend - only show if we have compounded data */}
-          {hasCompoundedData && (
+            if (isLineOutsideChart) {
+              // When line is outside chart, show "Live Data" label at the left axis
+              return (
+                <ReferenceLine
+                  y={yAxisMax * 0.95} // Position near top of chart
+                  stroke="transparent"
+                  label={{
+                    value: 'Live Data',
+                    position: 'insideLeft',
+                    fill: '#10b981',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    offset: 10,
+                  }}
+                />
+              )
+            } else {
+              // When line is visible, show both line and label
+              return (
+                <ReferenceLine
+                  x={forwardTestStartDate}
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  label={{
+                    value: 'Live Data',
+                    position: 'insideTopLeft',
+                    fill: '#10b981',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    offset: 10,
+                  }}
+                />
+              )
+            }
+          })()}
+
+          {/* Legend - show when we have compounded data or drawdown */}
+          {(hasCompoundedData || showDrawdown) && (
             <Legend
               verticalAlign="top"
               height={36}
@@ -189,6 +214,7 @@ export function EquityCurve({
               formatter={(value: string) => {
                 if (value === 'equity') return 'Fixed Position'
                 if (value === 'equityCompounded') return 'Monthly Compounding'
+                if (value === 'drawdown') return 'Drawdown'
                 return value
               }}
               wrapperStyle={{
