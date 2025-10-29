@@ -89,7 +89,7 @@ export function DateRangePicker({
 
   return (
     <div className="card">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         {/* Date Inputs */}
         <div className="flex flex-col gap-2">
           <span className="text-xs sm:text-sm font-display font-semibold text-text-primary">
@@ -125,14 +125,18 @@ export function DateRangePicker({
           </div>
         </div>
 
-        {/* Quick Select Buttons - responsive: 1 row on large screens, 2 rows on small screens */}
-        <div className="grid grid-cols-4 lg:grid-cols-8 gap-2" role="tablist" aria-label="Time period selection">
+        {/* Quick Select Buttons - responsive layout:
+            - Large screens: 8 buttons in 1 row, 60px width, aligned to right
+            - Medium screens: 8 buttons in 1 row below dates, full width
+            - Small screens: 4+4 buttons in 2 rows below dates, full width */}
+        <div className="grid grid-cols-4 md:grid-cols-8 gap-2 lg:ml-auto" role="tablist" aria-label="Time period selection">
           {periods.map((period) => (
             <button
               key={period}
               onClick={() => handleQuickSelect(period)}
               className={`
                 px-3 py-2 rounded-md text-sm font-display font-medium transition-all
+                lg:w-[60px]
                 ${
                   activePeriod === period
                     ? 'bg-deus-gray text-white shadow-md'
