@@ -88,7 +88,7 @@ function calculateHourlyDistribution(trades: Transaction[]): import('../types/st
     value: parseInt(hour),
     entryCount: data.entries,
     profitSum: data.profit,
-    lossSum: data.loss,
+    lossSum: Math.abs(data.loss),
     netProfit: data.profit + data.loss,
   }))
 }
@@ -122,7 +122,7 @@ function calculateDailyDistribution(trades: Transaction[]): import('../types/str
     value: parseInt(day),
     entryCount: data.entries,
     profitSum: data.profit,
-    lossSum: data.loss,
+    lossSum: Math.abs(data.loss),
     netProfit: data.profit + data.loss,
   }))
 }
@@ -156,9 +156,42 @@ function calculateMonthlyDistribution(trades: Transaction[]): import('../types/s
     value: parseInt(month),
     entryCount: data.entries,
     profitSum: data.profit,
-    lossSum: data.loss,
+    lossSum: Math.abs(data.loss),
     netProfit: data.profit + data.loss,
   }))
+}
+
+/**
+ * Calculate yearly distribution
+ * Database already stores time in broker timezone (UTC+2)
+ */
+function calculateYearlyDistribution(trades: Transaction[]): import('../types/strategy-report').TimeDistribution[] {
+  const yearlyData: { [year: number]: { entries: number; profit: number; loss: number } } = {}
+
+  // Count entries and P&L by year
+  for (const trade of trades) {
+    const year = trade.openTime.getFullYear()
+    if (!yearlyData[year]) {
+      yearlyData[year] = { entries: 0, profit: 0, loss: 0 }
+    }
+    yearlyData[year].entries++
+    if (trade.profit > 0) {
+      yearlyData[year].profit += trade.profit
+    } else {
+      yearlyData[year].loss += trade.profit
+    }
+  }
+
+  return Object.entries(yearlyData)
+    .sort(([a], [b]) => parseInt(a) - parseInt(b))
+    .map(([year, data]) => ({
+      label: year,
+      value: parseInt(year),
+      entryCount: data.entries,
+      profitSum: data.profit,
+      lossSum: Math.abs(data.loss),
+      netProfit: data.profit + data.loss,
+    }))
 }
 
 /**
@@ -236,6 +269,7 @@ function calculateChartData(transactions: Transaction[]): ChartData {
   const hourlyDistribution = calculateHourlyDistribution(trades)
   const dailyDistribution = calculateDailyDistribution(trades)
   const monthlyDistribution = calculateMonthlyDistribution(trades)
+  const yearlyDistribution = calculateYearlyDistribution(trades)
 
   // Calculate holding time scatter data
   const holdingTimeScatter = calculateHoldingTimeScatter(trades)
@@ -248,6 +282,7 @@ function calculateChartData(transactions: Transaction[]): ChartData {
     hourlyDistribution,
     dailyDistribution,
     monthlyDistribution,
+    yearlyDistribution,
     holdingTimeScatter,
   }
 }

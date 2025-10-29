@@ -125,6 +125,7 @@ export default async function StrategyReportPage({ params }: PageProps) {
               hourlyDist={reportData.charts.hourlyDistribution}
               dailyDist={reportData.charts.dailyDistribution}
               monthlyDist={reportData.charts.monthlyDistribution}
+              yearlyDist={reportData.charts.yearlyDistribution}
             />
           </div>
 

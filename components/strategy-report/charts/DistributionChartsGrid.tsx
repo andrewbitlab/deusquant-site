@@ -16,12 +16,14 @@ interface DistributionChartsGridProps {
   hourlyDist: TimeDistribution[]
   dailyDist: TimeDistribution[]
   monthlyDist: TimeDistribution[]
+  yearlyDist: TimeDistribution[]
 }
 
 export function DistributionChartsGrid({
   hourlyDist,
   dailyDist,
   monthlyDist,
+  yearlyDist,
 }: DistributionChartsGridProps) {
   return (
     <div className="card">
@@ -29,28 +31,40 @@ export function DistributionChartsGrid({
         Distribution Analysis
       </h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {/* Entry Distribution Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Hourly Distribution Pair */}
         <DistributionChart
           title="Hourly Entries"
           data={hourlyDist}
           dataKey="entryCount"
-          color="#f59e0b"
+          color="#3b82f6"
           gradientId="hourGradient"
-          gradientFrom="#f59e0b"
-          gradientTo="#16a34a"
+          gradientFrom="#3b82f6"
+          gradientTo="#3b82f6"
         />
 
+        <ProfitLossChart
+          title="Hourly P&L"
+          data={hourlyDist}
+        />
+
+        {/* Daily Distribution Pair */}
         <DistributionChart
           title="Daily Entries"
           data={dailyDist}
           dataKey="entryCount"
-          color="#16a34a"
+          color="#3b82f6"
           gradientId="dayGradient"
-          gradientFrom="#16a34a"
-          gradientTo="#16a34a"
+          gradientFrom="#3b82f6"
+          gradientTo="#3b82f6"
         />
 
+        <ProfitLossChart
+          title="Daily P&L"
+          data={dailyDist}
+        />
+
+        {/* Monthly Distribution Pair */}
         <DistributionChart
           title="Monthly Entries"
           data={monthlyDist}
@@ -61,20 +75,25 @@ export function DistributionChartsGrid({
           gradientTo="#3b82f6"
         />
 
-        {/* P&L Distribution Charts */}
-        <ProfitLossChart
-          title="Hourly P&L"
-          data={hourlyDist}
-        />
-
-        <ProfitLossChart
-          title="Daily P&L"
-          data={dailyDist}
-        />
-
         <ProfitLossChart
           title="Monthly P&L"
           data={monthlyDist}
+        />
+
+        {/* Yearly Distribution Pair */}
+        <DistributionChart
+          title="Yearly Entries"
+          data={yearlyDist}
+          dataKey="entryCount"
+          color="#3b82f6"
+          gradientId="yearGradient"
+          gradientFrom="#3b82f6"
+          gradientTo="#3b82f6"
+        />
+
+        <ProfitLossChart
+          title="Yearly P&L"
+          data={yearlyDist}
         />
       </div>
     </div>
@@ -172,7 +191,7 @@ function ProfitLossChart({
       <h4 className="text-sm font-display font-medium text-text-secondary mb-3">{title}</h4>
       <div className="w-full h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 5, right: 5, left: -10, bottom: 20 }}>
+          <BarChart data={data} margin={{ top: 5, right: 5, left: -10, bottom: 20 }} barGap={0}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.6} />
 
             <XAxis
@@ -219,8 +238,8 @@ function ProfitLossChart({
               }}
             />
 
-            <Bar dataKey="profitSum" stackId="pnl" fill="#16a34a" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="lossSum" stackId="pnl" fill="#dc2626" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="profitSum" fill="#16a34a" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="lossSum" fill="#f87171" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

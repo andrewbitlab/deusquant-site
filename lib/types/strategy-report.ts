@@ -175,6 +175,7 @@ export interface ChartData {
   hourlyDistribution: TimeDistribution[]
   dailyDistribution: TimeDistribution[]
   monthlyDistribution: TimeDistribution[]
+  yearlyDistribution: TimeDistribution[]
 
   // Holding time scatter (profit vs duration)
   holdingTimeScatter: HoldingTimePoint[]
