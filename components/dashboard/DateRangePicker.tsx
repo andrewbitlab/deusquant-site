@@ -89,7 +89,7 @@ export function DateRangePicker({
 
   return (
     <div className="card">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         {/* Date Inputs */}
         <div className="flex flex-col gap-2">
           <span className="text-xs sm:text-sm font-display font-semibold text-text-primary">
