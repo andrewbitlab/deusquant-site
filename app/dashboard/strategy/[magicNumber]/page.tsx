@@ -47,6 +47,58 @@ export default async function StrategyReportPage({ params }: PageProps) {
           <MetricsGrid metrics={reportData.metrics} />
         </Suspense>
 
+        {/* Trades summary */}
+        <div className="mt-8">
+          <h2 className="text-xl font-display font-semibold text-text-primary mb-4">
+            Trades Summary
+          </h2>
+          <div className="card">
+            <div className="grid grid-cols-2 gap-6">
+              {/* Row 1 */}
+              <div>
+                <div className="text-xs text-text-muted uppercase">Total Trades</div>
+                <div className="text-2xl font-bold font-mono text-text-primary mt-1">
+                  {reportData.tradesSummary.totalTrades}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-text-muted uppercase">Win Rate</div>
+                <div className="text-2xl font-bold font-mono text-accent-profit mt-1">
+                  {reportData.tradesSummary.winRate.toFixed(2)}%
+                </div>
+              </div>
+
+              {/* Row 2 - Average Win/Loss */}
+              <div>
+                <div className="text-xs text-text-muted uppercase">Average Win</div>
+                <div className="text-2xl font-bold font-mono text-accent-profit mt-1">
+                  ${reportData.tradesSummary.averageProfit.toFixed(2)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-text-muted uppercase">Average Loss</div>
+                <div className="text-2xl font-bold font-mono text-accent-loss mt-1">
+                  ${Math.abs(reportData.tradesSummary.averageLoss).toFixed(2)}
+                </div>
+              </div>
+
+              {/* Row 3 - Largest Win/Loss */}
+              <div>
+                <div className="text-xs text-text-muted uppercase">Largest Win</div>
+                <div className="text-2xl font-bold font-mono text-accent-profit mt-1">
+                  ${reportData.tradesSummary.largestProfit.toFixed(2)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-text-muted uppercase">Largest Loss</div>
+                <div className="text-2xl font-bold font-mono text-accent-loss mt-1">
+                  ${Math.abs(reportData.tradesSummary.largestLoss).toFixed(2)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Charts section */}
         <div className="mt-8 space-y-6">
           <h2 className="text-xl font-display font-semibold text-text-primary mb-4">
@@ -82,41 +134,6 @@ export default async function StrategyReportPage({ params }: PageProps) {
               Holding Time Analysis
             </h3>
             <HoldingTimeScatterChart data={reportData.charts.holdingTimeScatter} />
-          </div>
-        </div>
-
-        {/* Trades summary */}
-        <div className="mt-8">
-          <h2 className="text-xl font-display font-semibold text-text-primary mb-4">
-            Trades Summary
-          </h2>
-          <div className="card">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <div className="text-xs text-text-muted uppercase">Total Trades</div>
-                <div className="text-2xl font-bold font-mono text-text-primary mt-1">
-                  {reportData.tradesSummary.totalTrades}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-text-muted uppercase">Win Rate</div>
-                <div className="text-2xl font-bold font-mono text-accent-profit mt-1">
-                  {reportData.tradesSummary.winRate.toFixed(2)}%
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-text-muted uppercase">Largest Win</div>
-                <div className="text-2xl font-bold font-mono text-accent-profit mt-1">
-                  ${reportData.tradesSummary.largestProfit.toFixed(2)}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-text-muted uppercase">Largest Loss</div>
-                <div className="text-2xl font-bold font-mono text-accent-loss mt-1">
-                  ${Math.abs(reportData.tradesSummary.largestLoss).toFixed(2)}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

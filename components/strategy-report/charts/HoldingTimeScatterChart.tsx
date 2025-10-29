@@ -27,6 +27,30 @@ export function HoldingTimeScatterChart({ data }: HoldingTimeScatterChartProps) 
   const maxProfit = Math.max(...data.map((d) => Math.abs(d.profit)))
   const minProfit = Math.min(...data.map((d) => d.profit))
 
+  // X-axis domain: 0 to max holding time with 10% padding
+  const xMax = Math.ceil(maxHoldingTime * 1.1)
+
+  // Generate nice ticks for X-axis (always include 0)
+  const generateXTicks = (max: number): number[] => {
+    if (max <= 24) {
+      // For < 1 day: 0, 8h, 16h, 24h
+      return [0, 8, 16, 24]
+    } else if (max <= 120) {
+      // For 1-5 days: 0, 1d, 2d, 3d, 4d, 5d
+      return [0, 24, 48, 72, 96, 120]
+    } else if (max <= 720) {
+      // For 5-30 days: 0, 7d, 14d, 21d, 30d
+      return [0, 168, 336, 504, 720]
+    } else {
+      // For > 30 days: 0, 30d, 60d, 90d, 120d, 150d, 180d
+      const step = Math.ceil(max / 6 / 720) * 720 // Round to nearest 30 days
+      return Array.from({ length: 7 }, (_, i) => i * step)
+    }
+  }
+
+  const xTicks = generateXTicks(xMax).filter(tick => tick <= xMax)
+
+  // Y-axis domain: min to max profit with padding
   const yMin = Math.floor(minProfit * 1.1 / 1000) * 1000
   const yMax = Math.ceil(maxProfit * 1.1 / 1000) * 1000
 
@@ -57,6 +81,8 @@ export function HoldingTimeScatterChart({ data }: HoldingTimeScatterChartProps) 
                 if (value >= 24) return `${(value / 24).toFixed(0)}d`
                 return `${value}h`
               }}
+              domain={[0, xMax]}
+              ticks={xTicks}
             />
 
             <YAxis

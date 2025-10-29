@@ -35,12 +35,24 @@ export function StatsPanel({ stats }: StatsPanelProps) {
     }
   }
 
-  const getValueColor = (stat: Stat): string => {
-    // Color coding for profit percentages
-    if ((stat.label.includes('Total Profit') || stat.label.includes('Monthly Profit')) && typeof stat.value === 'number') {
-      if (stat.value > 0) return 'text-accent-profit'
-      if (stat.value < 0) return 'text-accent-loss'
+  const getValueColor = (stat: Stat, isCompounded: boolean = false): string => {
+    // Total Profit: Fixed (black) / Compounded (green)
+    if (stat.label.includes('Total Profit') && typeof stat.value === 'number') {
+      if (isCompounded) {
+        return stat.value > 0 ? 'text-accent-profit' : 'text-accent-loss'
+      }
+      return 'text-text-primary'
     }
+
+    // All other metrics with compounded values: black for fixed, green for compounded
+    // (matches chart: black line = fixed, green line = compounded)
+    if (stat.compoundedValue !== undefined && typeof stat.value === 'number') {
+      if (isCompounded) {
+        return 'text-accent-profit' // Green for compounded
+      }
+      return 'text-text-primary' // Black for fixed
+    }
+
     return 'text-text-primary'
   }
 
@@ -60,10 +72,10 @@ export function StatsPanel({ stats }: StatsPanelProps) {
               <div className={`stat-value ${getValueColor(stat)}`}>{stat.value}</div>
             ) : stat.compoundedValue !== undefined ? (
               <div className="flex flex-col gap-0.5">
-                <div className={`stat-value ${getValueColor(stat)}`}>
+                <div className={`stat-value ${getValueColor(stat, false)}`}>
                   {formatSingleValue(stat.value as number, stat)}
                 </div>
-                <div className={`stat-value text-accent-profit`}>
+                <div className={`stat-value ${getValueColor(stat, true)}`}>
                   {formatSingleValue(stat.compoundedValue, stat)}
                 </div>
               </div>

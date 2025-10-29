@@ -454,7 +454,6 @@ function DashboardClientComponent({ strategies }: DashboardClientProps) {
       {
         label: 'Sharpe Ratio',
         value: portfolioSharpe,
-        compoundedValue: compoundedSharpe,
         format: 'ratio' as const
       },
       {

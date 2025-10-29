@@ -9,6 +9,25 @@ import type {
 } from './types'
 
 /**
+ * Internal structure for raw deal data from Excel
+ */
+interface RawDeal {
+  time: Date
+  dealNumber: number
+  symbol: string
+  dealType: string       // "buy in", "sell out", "balance", etc.
+  direction: string      // "buy", "sell"
+  volume: number
+  price: number
+  orderNumber: number
+  commission: number
+  swap: number
+  profit: number
+  balance: number
+  comment: string
+}
+
+/**
  * MT5 Excel Parser
  * Parses MetaTrader 5 backtest results exported to Excel format
  */
@@ -306,19 +325,39 @@ export class MT5ExcelParser {
 
   /**
    * Parse transaction history from Excel data (Polish MT5 "Transakcje" table)
+   *
+   * MT5 exports deals (not positions), so we need to pair entry/exit deals
+   * to reconstruct actual trading positions with correct holding times.
+   *
+   * Deal Structure:
+   * - Entry deals ("in"): buy in, sell in - open position, profit=0
+   * - Exit deals ("out"): sell out, buy out - close position, has profit/swap
+   *
+   * This approach is universal and works for all strategy types.
    */
   private static parseTransactions(data: any[][]): MT5Transaction[] {
-    const transactions: MT5Transaction[] = []
+    // Step 1: Parse all raw deals from Excel
+    const rawDeals = this.parseRawDeals(data)
 
-    // Find the "Transakcje" (deals) table - not "Zlecenia" (orders)
+    // Step 2: Pair entry/exit deals to reconstruct positions
+    const positions = this.pairDealsIntoPositions(rawDeals)
+
+    return positions
+  }
+
+  /**
+   * Parse raw deals from "Transakcje" table
+   */
+  private static parseRawDeals(data: any[][]): RawDeal[] {
+    const deals: RawDeal[] = []
+
+    // Find the "Transakcje" (deals) table
     let headerRow = -1
     for (let i = 0; i < data.length; i++) {
       const row = data[i]
       const firstCell = String(row[0] || '').toLowerCase()
 
-      // Look for "Transakcje" section header first
       if (firstCell.includes('transakcje') && !firstCell.includes('wszystkie')) {
-        // Next row should be the header with "Czas", "Umowa", etc.
         if (i + 1 < data.length) {
           const nextRow = String(data[i + 1][0] || '').toLowerCase()
           if (nextRow.includes('czas') || nextRow.includes('time')) {
@@ -329,56 +368,154 @@ export class MT5ExcelParser {
       }
     }
 
-    if (headerRow === -1) return transactions
+    if (headerRow === -1) {
+      console.warn('MT5 Excel Parser: Could not find Transakcje table')
+      return deals
+    }
 
-    // Parse transactions (Polish format from "Transakcje" table)
+    // Parse deals
     // Columns: Czas(0), Umowa(1), Instrument(2), Typ(3), Kierunek(4), Wolumen(5),
     //          Cena(6), Zlecenie(7), Prowizja(8), Swap(9), Zysk(10), Saldo(11), Komentarz(12)
     for (let i = headerRow + 1; i < data.length; i++) {
       const row = data[i]
       if (!row || row.length < 5) continue
-
-      // Stop if we hit another section or empty rows
-      if (!row[0] && !row[1]) continue
+      if (!row[0] && !row[1]) continue // Empty row
 
       try {
-        const dealTime = this.parseDate(row[0])
-        const type = this.parseTradeType(String(row[3] || ''))
-        const symbol = String(row[2] || '')
-        const volume = parseFloat(String(row[5] || '0'))
-        const price = parseFloat(String(row[6] || '0'))
-        const commission = parseFloat(String(row[8] || '0'))
-        const swap = parseFloat(String(row[9] || '0'))
-        const profit = parseFloat(String(row[10] || '0'))
-        const balance = parseFloat(String(row[11] || '0'))
+        const time = this.parseDate(row[0])
+        if (!time || time.getTime() === 0) continue
 
-        // Skip if date is invalid
-        if (!dealTime || dealTime.getTime() === 0) continue
+        const type = String(row[3] || '').toLowerCase().trim()       // 'buy', 'sell', 'balance'
+        const direction = String(row[4] || '').toLowerCase().trim()  // 'in', 'out', ''
 
-        const transaction: MT5Transaction = {
-          id: parseInt(String(row[1] || i), 10),
-          type: type,
-          openTime: dealTime,
-          closeTime: dealTime, // In deals table, we only have one timestamp
-          symbol: symbol,
-          volume: volume,
-          openPrice: price,
-          closePrice: price,
-          commission: commission,
-          swap: swap,
-          profit: profit,
-          balance: balance,
-          comment: String(row[12] || '') || undefined,
-        }
+        // Combine type + direction for deal type (e.g., "buy in", "sell out")
+        const dealType = direction ? `${type} ${direction}` : type
 
-        transactions.push(transaction)
+        deals.push({
+          time,
+          dealNumber: parseInt(String(row[1] || '0'), 10),
+          symbol: String(row[2] || ''),
+          dealType,
+          direction,
+          volume: parseFloat(String(row[5] || '0')),
+          price: parseFloat(String(row[6] || '0')),
+          orderNumber: parseInt(String(row[7] || '0'), 10),
+          commission: parseFloat(String(row[8] || '0')),
+          swap: parseFloat(String(row[9] || '0')),
+          profit: parseFloat(String(row[10] || '0')),
+          balance: parseFloat(String(row[11] || '0')),
+          comment: String(row[12] || ''),
+        })
       } catch (error) {
-        // Skip malformed rows
+        console.warn(`MT5 Excel Parser: Failed to parse deal at row ${i}`, error)
         continue
       }
     }
 
-    return transactions
+    return deals
+  }
+
+  /**
+   * Pair entry/exit deals into positions
+   *
+   * Strategy: Deals come in sequential pairs:
+   * - Entry deal (in): Opens position, profit=0
+   * - Exit deal (out): Closes position, has profit/swap
+   *
+   * We reconstruct positions by pairing consecutive in/out deals.
+   */
+  private static pairDealsIntoPositions(deals: RawDeal[]): MT5Transaction[] {
+    const positions: MT5Transaction[] = []
+
+    // Debug: Show first 5 deal types
+    console.log('[Parser] First 5 deal types:', deals.slice(0, 5).map(d => d.dealType))
+
+    // Separate entry and exit deals, skipping balance/credit
+    const tradingDeals = deals.filter(d =>
+      d.dealType.includes('in') || d.dealType.includes('out')
+    )
+
+    console.log(`[Parser] Filtered to ${tradingDeals.length} trading deals (in/out)`)
+
+    // Track unpaired entry deals
+    let pendingEntry: RawDeal | null = null
+
+    for (const deal of tradingDeals) {
+      const isEntryDeal = deal.dealType.includes(' in')
+      const isExitDeal = deal.dealType.includes(' out')
+
+      if (isEntryDeal) {
+        // Entry deal - store it and wait for matching exit
+        if (pendingEntry) {
+          console.warn(
+            `MT5 Parser: Found entry deal without matching exit. ` +
+            `Deal #${pendingEntry.dealNumber} @ ${pendingEntry.time.toISOString()}`
+          )
+        }
+        pendingEntry = deal
+      }
+      else if (isExitDeal && pendingEntry) {
+        // Exit deal with pending entry - create position
+        const position = this.createPositionFromDealPair(pendingEntry, deal)
+        if (position) {
+          positions.push(position)
+        }
+        pendingEntry = null
+      }
+      else if (isExitDeal && !pendingEntry) {
+        console.warn(
+          `MT5 Parser: Found exit deal without entry. ` +
+          `Deal #${deal.dealNumber} @ ${deal.time.toISOString()}`
+        )
+      }
+    }
+
+    // Check for unpaired entry at end
+    if (pendingEntry) {
+      console.warn(
+        `MT5 Parser: Unclosed position at end of data. ` +
+        `Deal #${pendingEntry.dealNumber} @ ${pendingEntry.time.toISOString()}`
+      )
+    }
+
+    return positions
+  }
+
+  /**
+   * Create a position (MT5Transaction) from entry/exit deal pair
+   */
+  private static createPositionFromDealPair(
+    entry: RawDeal,
+    exit: RawDeal
+  ): MT5Transaction | null {
+    try {
+      // Determine position direction from entry deal
+      const isBuy = entry.dealType.includes('buy')
+      const type = isBuy ? 'BUY' : 'SELL'
+
+      return {
+        id: entry.orderNumber, // Use order number as position ID
+        type,
+        openTime: entry.time,
+        closeTime: exit.time,
+        symbol: entry.symbol,
+        volume: entry.volume,
+        openPrice: entry.price,
+        closePrice: exit.price,
+        commission: exit.commission,
+        swap: exit.swap,
+        profit: exit.profit,
+        balance: exit.balance,
+        comment: entry.comment || exit.comment || undefined,
+      }
+    } catch (error) {
+      console.error(
+        `MT5 Parser: Failed to create position from deals ` +
+        `#${entry.dealNumber} and #${exit.dealNumber}`,
+        error
+      )
+      return null
+    }
   }
 
   /**
