@@ -146,6 +146,23 @@ NPM_FLAGS="--legacy-peer-deps"
 - Monitor `/api/health` after each deploy (`200` expected in healthy state).
 - Production build runs `scripts/prebuild-check.mjs` and fails fast when `DATABASE_URL` is missing or invalid.
 
+### GitHub IaC/CI for Netlify (Automatic)
+
+Repository includes workflow: `.github/workflows/netlify-iac-deploy.yml`
+
+What it does on each push to `main`:
+- syncs required production env vars in Netlify (`DATABASE_URL`, `NODE_VERSION`, `NPM_FLAGS`)
+- verifies that `DATABASE_URL` exists in Netlify production context
+- triggers a production Netlify build via API
+
+Required GitHub Actions secrets:
+- `NETLIFY_AUTH_TOKEN` (personal access token for Netlify API/CLI)
+- `NETLIFY_SITE_ID` (target Netlify site ID)
+- `NETLIFY_DATABASE_URL_PRODUCTION` (PostgreSQL connection string for production)
+
+Script used by workflow:
+- `scripts/ci/netlify-iac-deploy.sh`
+
 ## Development Phases Completed
 
 1. ✅ **Phase 1**: Project initialization with Next.js, Tailwind, and DEUS QUANT theme
