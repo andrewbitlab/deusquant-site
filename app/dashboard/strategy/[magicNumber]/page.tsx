@@ -1,15 +1,12 @@
 import { Suspense } from 'react'
-import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { loadStrategyReport, calculateMonthlyReturns } from '@/lib/data/strategy-report-loader'
 import { MetricsGrid } from '@/components/strategy-report/MetricsGrid'
 import { ReportHeader } from '@/components/strategy-report/ReportHeader'
-import {
-  EquityCurveChart,
-  DistributionChartsGrid,
-  HoldingTimeScatterChart,
-  MonthlyReturnsTable,
-} from '@/components/strategy-report/charts'
+import { EquityCurveChart } from '@/components/strategy-report/charts/EquityCurveChart'
+import { DistributionChartsGrid } from '@/components/strategy-report/charts/DistributionChartsGrid'
+import { HoldingTimeScatterChart } from '@/components/strategy-report/charts/HoldingTimeScatterChart'
+import { MonthlyReturnsTable } from '@/components/strategy-report/charts/MonthlyReturnsTable'
 
 // Increase timeout for complex report generation
 export const maxDuration = 60
@@ -34,13 +31,13 @@ export default async function StrategyReportPage({ params }: PageProps) {
       {/* Header with back button */}
       <div className="bg-white border-b border-border-light">
         <div className="container mx-auto px-4 md:px-6 py-4">
-          <Link
+          <a
             href="/dashboard"
             className="inline-flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm font-medium">Back to Dashboard</span>
-          </Link>
+          </a>
 
           <ReportHeader strategyInfo={reportData.strategyInfo} />
         </div>

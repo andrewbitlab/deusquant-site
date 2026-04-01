@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import {
   ScatterChart,
   Scatter,
@@ -18,6 +19,12 @@ interface HoldingTimeScatterChartProps {
 }
 
 export function HoldingTimeScatterChart({ data }: HoldingTimeScatterChartProps) {
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   // Separate profitable and losing trades
   const profitableTrades = data.filter((d) => d.profit > 0)
   const losingTrades = data.filter((d) => d.profit <= 0)
@@ -61,73 +68,75 @@ export function HoldingTimeScatterChart({ data }: HoldingTimeScatterChartProps) 
       </h3>
 
       <div className="w-full h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.6} />
+        {isMounted && (
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={300}>
+            <ScatterChart margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.6} />
 
-            <XAxis
-              type="number"
-              dataKey="holdingTimeHours"
-              name="Holding Time"
-              stroke="#a0a3a9"
-              tick={{ fill: '#7a7d84', fontSize: 11 }}
-              label={{
-                value: 'Holding Time (hours)',
-                position: 'insideBottom',
-                offset: -10,
-                style: { fill: '#7a7d84', fontSize: 12 },
-              }}
-              tickFormatter={(value) => {
-                if (value >= 24) return `${(value / 24).toFixed(0)}d`
-                return `${value}h`
-              }}
-              domain={[0, xMax]}
-              ticks={xTicks}
-            />
+              <XAxis
+                type="number"
+                dataKey="holdingTimeHours"
+                name="Holding Time"
+                stroke="#a0a3a9"
+                tick={{ fill: '#7a7d84', fontSize: 11 }}
+                label={{
+                  value: 'Holding Time (hours)',
+                  position: 'insideBottom',
+                  offset: -10,
+                  style: { fill: '#7a7d84', fontSize: 12 },
+                }}
+                tickFormatter={(value) => {
+                  if (value >= 24) return `${(value / 24).toFixed(0)}d`
+                  return `${value}h`
+                }}
+                domain={[0, xMax]}
+                ticks={xTicks}
+              />
 
-            <YAxis
-              type="number"
-              dataKey="profit"
-              name="Profit"
-              stroke="#a0a3a9"
-              tick={{ fill: '#7a7d84', fontSize: 11 }}
-              label={{
-                value: 'Profit ($)',
-                angle: -90,
-                position: 'insideLeft',
-                style: { fill: '#7a7d84', fontSize: 12 },
-              }}
-              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-              domain={[yMin, yMax]}
-            />
+              <YAxis
+                type="number"
+                dataKey="profit"
+                name="Profit"
+                stroke="#a0a3a9"
+                tick={{ fill: '#7a7d84', fontSize: 11 }}
+                label={{
+                  value: 'Profit ($)',
+                  angle: -90,
+                  position: 'insideLeft',
+                  style: { fill: '#7a7d84', fontSize: 12 },
+                }}
+                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                domain={[yMin, yMax]}
+              />
 
-            <ZAxis range={[20, 100]} />
+              <ZAxis range={[20, 100]} />
 
-            <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
 
-            <ReferenceLine y={0} stroke="#54585f" strokeWidth={2} strokeDasharray="3 3" />
+              <ReferenceLine y={0} stroke="#54585f" strokeWidth={2} strokeDasharray="3 3" />
 
-            {/* Profitable trades - green dots */}
-            <Scatter
-              name="Profitable Trades"
-              data={profitableTrades}
-              fill="#16a34a"
-              fillOpacity={0.6}
-              stroke="#16a34a"
-              strokeWidth={1}
-            />
+              {/* Profitable trades - green dots */}
+              <Scatter
+                name="Profitable Trades"
+                data={profitableTrades}
+                fill="#16a34a"
+                fillOpacity={0.6}
+                stroke="#16a34a"
+                strokeWidth={1}
+              />
 
-            {/* Losing trades - red dots */}
-            <Scatter
-              name="Losing Trades"
-              data={losingTrades}
-              fill="#dc2626"
-              fillOpacity={0.6}
-              stroke="#dc2626"
-              strokeWidth={1}
-            />
-          </ScatterChart>
-        </ResponsiveContainer>
+              {/* Losing trades - red dots */}
+              <Scatter
+                name="Losing Trades"
+                data={losingTrades}
+                fill="#dc2626"
+                fillOpacity={0.6}
+                stroke="#dc2626"
+                strokeWidth={1}
+              />
+            </ScatterChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       <div className="flex items-center justify-center gap-6 mt-4 text-xs">
