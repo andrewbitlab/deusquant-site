@@ -49,6 +49,7 @@ logs/
 # Cache
 .cache/
 .turbo/
+/.playwright-mcp/
 
 # Uploads
 uploads/
