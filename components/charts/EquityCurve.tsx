@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import {
   LineChart,
   Line,
@@ -34,6 +35,12 @@ export function EquityCurve({
   forwardTestStartDate,
   isPercentage = false
 }: EquityCurveProps) {
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   // Calculate dynamic Y-axis domain based on actual data (including compounded if present)
   const maxEquity = Math.max(
     ...data.map(d => d.equity),
@@ -83,9 +90,13 @@ export function EquityCurve({
   const yAxisMax = yAxisConfig.max
   const yAxisTicks = yAxisConfig.ticks
 
+  if (!isMounted) {
+    return <div className="w-full h-[280px] sm:h-[320px] md:h-[400px]" />
+  }
+
   return (
     <div className="w-full h-[280px] sm:h-[320px] md:h-[400px]">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
         <ComposedChart
           data={data}
           margin={{

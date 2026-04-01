@@ -75,6 +75,8 @@ export default function BacktestReportPage({ params }: BacktestReportPageProps) 
               <h2 className="font-display text-lg font-semibold mb-4 text-deus-gray">
                 MAE/MFE Analysis
               </h2>
+              {/* This chart is generated externally and served via a local API route with dynamic sizing. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`/api/backtest/images/${magicNumber}-mafe.png`}
                 alt={`MAE/MFE Chart for Strategy ${magicNumber}`}

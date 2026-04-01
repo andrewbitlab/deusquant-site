@@ -9,6 +9,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import { readFileSync, existsSync } from 'fs'
+import { randomUUID } from 'crypto'
 import { ForwardCSVParser } from '../lib/parsers/csv/forward-parser'
 
 const prisma = new PrismaClient()
@@ -90,6 +91,7 @@ async function main() {
     for (const tx of closedTransactions) {
       await prisma.transaction.create({
         data: {
+          id: randomUUID(),
           strategyId: strategy.id,
           orderId: tx.id,
           type: tx.type,

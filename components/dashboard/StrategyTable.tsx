@@ -35,6 +35,9 @@ export function StrategyTable({
     const allIds = new Set(strategies.map((s) => s.id))
     setSelected(allIds)
     onSelectionChange?.(Array.from(allIds))
+    // Intentionally reset only when strategy count changes to preserve user selection
+    // during parent re-renders with stable data.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [strategies.length]) // Only reset when number of strategies changes
 
   const toggleSelection = (id: string) => {
