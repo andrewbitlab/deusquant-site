@@ -2,6 +2,10 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { filename: string } }

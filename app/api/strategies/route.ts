@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/data/prisma'
+import { isDatabaseConfigured, prisma } from '@/lib/data/prisma'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function GET() {
+  if (!isDatabaseConfigured()) {
+    return NextResponse.json(
+      { error: 'DATABASE_URL is not configured' },
+      { status: 503 }
+    )
+  }
+
   try {
     const strategies = await prisma.strategy.findMany({
       where: { isActive: true },
@@ -18,6 +29,13 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isDatabaseConfigured()) {
+    return NextResponse.json(
+      { error: 'DATABASE_URL is not configured' },
+      { status: 503 }
+    )
+  }
+
   try {
     const data = await request.json()
 

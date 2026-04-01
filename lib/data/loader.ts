@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { isDatabaseConfigured, prisma } from './prisma'
 import {
   calculateStatistics,
   buildProfitCurve,
@@ -53,6 +53,10 @@ export interface StrategyData {
 }
 
 export async function getAllStrategies(): Promise<StrategyData[]> {
+  if (!isDatabaseConfigured()) {
+    throw new Error('DATABASE_URL is not configured')
+  }
+
   try {
     // Query all strategies with their transactions from database
     const dbStrategies = await prisma.strategy.findMany({

@@ -3,6 +3,10 @@ import { join } from 'path'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface BacktestReportPageProps {
   params: {
     magicNumber: string
@@ -101,14 +105,4 @@ export default function BacktestReportPage({ params }: BacktestReportPageProps) 
     console.error(`Failed to load backtest report for strategy ${magicNumber}:`, error)
     notFound()
   }
-}
-
-// Generate static params for all available backtest reports
-export async function generateStaticParams() {
-  // List of available magic numbers with backtest HTML reports
-  const availableReports = ['202501021', '202501025', '202501027', '77701']
-
-  return availableReports.map((magicNumber) => ({
-    magicNumber,
-  }))
 }

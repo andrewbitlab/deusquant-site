@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/data/prisma'
+import { isDatabaseConfigured, prisma } from '@/lib/data/prisma'
 
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -9,6 +10,21 @@ export const revalidate = 0
  * Returns 200 OK if database is reachable, 503 Service Unavailable otherwise
  */
 export async function GET() {
+  if (!isDatabaseConfigured()) {
+    return NextResponse.json(
+      {
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        database: {
+          status: 'not_configured',
+          error: 'DATABASE_URL is not configured',
+        },
+        service: 'deus-quant-portfolio',
+      },
+      { status: 503 }
+    )
+  }
+
   try {
     // Test database connection with a simple query
     await prisma.$queryRaw`SELECT 1`

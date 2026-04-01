@@ -8,9 +8,9 @@ import { DistributionChartsGrid } from '@/components/strategy-report/charts/Dist
 import { HoldingTimeScatterChart } from '@/components/strategy-report/charts/HoldingTimeScatterChart'
 import { MonthlyReturnsTable } from '@/components/strategy-report/charts/MonthlyReturnsTable'
 
-// Increase timeout for complex report generation
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 export const maxDuration = 60
-export const revalidate = 3600 // Cache for 1 hour
 
 interface PageProps {
   params: { magicNumber: string }

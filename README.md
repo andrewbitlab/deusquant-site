@@ -139,6 +139,13 @@ NODE_VERSION="20"
 NPM_FLAGS="--legacy-peer-deps"
 \`\`\`
 
+### Netlify Production Reliability Checklist
+
+- Add `DATABASE_URL` in Netlify environment variables for `production` context.
+- Keep SSL enabled in the connection string (`sslmode=require`).
+- Monitor `/api/health` after each deploy (`200` expected in healthy state).
+- Production build runs `scripts/prebuild-check.mjs` and fails fast when `DATABASE_URL` is missing or invalid.
+
 ## Development Phases Completed
 
 1. ✅ **Phase 1**: Project initialization with Next.js, Tailwind, and DEUS QUANT theme

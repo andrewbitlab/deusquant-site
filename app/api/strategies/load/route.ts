@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getAllStrategies } from '@/lib/data/loader'
 
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function GET() {
   try {
@@ -14,13 +16,19 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Failed to load strategies:', error)
+
+    const isConfigError =
+      error instanceof Error && error.message.includes('DATABASE_URL')
+
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to load strategies from files',
+        error: isConfigError
+          ? 'DATABASE_URL is not configured'
+          : 'Failed to load strategies from database',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: isConfigError ? 503 : 500 }
     )
   }
 }

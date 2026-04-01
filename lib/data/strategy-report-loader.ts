@@ -4,7 +4,7 @@
  * Hybrid approach: Database (transactions) + HTML parsing (advanced metrics)
  */
 
-import { prisma } from './prisma'
+import { isDatabaseConfigured, prisma } from './prisma'
 import { parseMT5HTMLReport, getChartImagePaths } from '../parsers/mt5-html-parser'
 import {
   calculateStatistics,
@@ -26,6 +26,10 @@ import type { Transaction } from '@prisma/client'
  * Load complete strategy report data
  */
 export async function loadStrategyReport(magicNumber: string): Promise<StrategyReportData> {
+  if (!isDatabaseConfigured()) {
+    throw new Error('DATABASE_URL is not configured')
+  }
+
   // 1. Load strategy and transactions from database (backtest only)
   const strategy = await prisma.strategy.findUnique({
     where: { magicNumber: parseInt(magicNumber) },
