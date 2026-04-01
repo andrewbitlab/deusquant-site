@@ -234,6 +234,33 @@ export interface HoldingTimePoint {
 }
 
 // ============================================================================
+// MONTHLY RETURNS TABLE
+// ============================================================================
+
+export interface MonthlyReturnsData {
+  years: YearlyReturns[]
+  avgMonthlyReturns: MonthlyAverage
+}
+
+export interface YearlyReturns {
+  year: number
+  months: MonthReturns[]
+  yearReturn: number
+  yearMDD: number
+}
+
+export interface MonthReturns {
+  month: number // 0-11 (Jan-Dec)
+  return: number | null // null if no data for this month
+  hasData: boolean
+}
+
+export interface MonthlyAverage {
+  months: number[] // average return for each month (0-11)
+  mdd: number // overall MDD
+}
+
+// ============================================================================
 // TRADES SUMMARY
 // ============================================================================
 

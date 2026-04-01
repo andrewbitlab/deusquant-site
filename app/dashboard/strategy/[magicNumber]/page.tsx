@@ -1,13 +1,14 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { loadStrategyReport } from '@/lib/data/strategy-report-loader'
+import { loadStrategyReport, calculateMonthlyReturns } from '@/lib/data/strategy-report-loader'
 import { MetricsGrid } from '@/components/strategy-report/MetricsGrid'
 import { ReportHeader } from '@/components/strategy-report/ReportHeader'
 import {
   EquityCurveChart,
   DistributionChartsGrid,
   HoldingTimeScatterChart,
+  MonthlyReturnsTable,
 } from '@/components/strategy-report/charts'
 
 // Increase timeout for complex report generation
@@ -23,6 +24,10 @@ export default async function StrategyReportPage({ params }: PageProps) {
 
   // Load complete report data
   const reportData = await loadStrategyReport(magicNumber)
+
+  // Calculate monthly returns for the table
+  const initialBalance = reportData.charts.equityCurve[0]?.balance || 10000
+  const monthlyReturnsData = calculateMonthlyReturns(reportData.charts.equityCurve, initialBalance)
 
   return (
     <div className="min-h-screen bg-bg-secondary">
@@ -115,6 +120,9 @@ export default async function StrategyReportPage({ params }: PageProps) {
               drawdown={reportData.charts.drawdown}
             />
           </div>
+
+          {/* Monthly Returns Table */}
+          <MonthlyReturnsTable data={monthlyReturnsData} />
 
           {/* Time-based Distributions */}
           <div className="space-y-2">

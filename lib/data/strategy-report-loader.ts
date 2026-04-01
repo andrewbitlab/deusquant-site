@@ -393,3 +393,153 @@ function buildTradesSummary(transactions: Transaction[]): TradesSummary {
 export function getChartImages(magicNumber: string) {
   return getChartImagePaths(magicNumber)
 }
+
+/**
+ * Calculate monthly returns from equity curve
+ * Used for "Fixed Position Monthly Returns" table
+ */
+export function calculateMonthlyReturns(
+  equityCurve: import('../types/strategy-report').EquityCurvePoint[],
+  initialBalance: number
+): import('../types/strategy-report').MonthlyReturnsData {
+  if (equityCurve.length === 0) {
+    return {
+      years: [],
+      avgMonthlyReturns: {
+        months: Array(12).fill(0),
+        mdd: 0,
+      },
+    }
+  }
+
+  // Group data points by year and month
+  type MonthData = {
+    startValue: number
+    endValue: number
+    minValue: number
+    hasData: boolean
+  }
+  type YearData = { [month: number]: MonthData }
+  const yearlyData: { [year: number]: YearData } = {}
+
+  // Process each point in the equity curve
+  for (let i = 0; i < equityCurve.length; i++) {
+    const point = equityCurve[i]
+    const date = new Date(point.date)
+    const year = date.getFullYear()
+    const month = date.getMonth() // 0-11
+
+    if (!yearlyData[year]) {
+      yearlyData[year] = {}
+    }
+
+    if (!yearlyData[year][month]) {
+      yearlyData[year][month] = {
+        startValue: point.balance,
+        endValue: point.balance,
+        minValue: point.balance,
+        hasData: true,
+      }
+    } else {
+      // Update end value and track minimum
+      yearlyData[year][month].endValue = point.balance
+      yearlyData[year][month].minValue = Math.min(yearlyData[year][month].minValue, point.balance)
+    }
+  }
+
+  // Build yearly returns data
+  const years: import('../types/strategy-report').YearlyReturns[] = []
+
+  for (const [yearStr, yearData] of Object.entries(yearlyData)) {
+    const year = parseInt(yearStr)
+    const months: import('../types/strategy-report').MonthReturns[] = []
+
+    let yearStartValue = initialBalance
+    let yearEndValue = initialBalance
+    let yearPeak = initialBalance
+    let yearMinDD = 0
+
+    // Find the actual start value for this year
+    if (Object.keys(yearData).length > 0) {
+      const firstMonth = Math.min(...Object.keys(yearData).map((m) => parseInt(m)))
+      yearStartValue = yearData[firstMonth].startValue
+    }
+
+    // Build months array
+    for (let month = 0; month < 12; month++) {
+      if (yearData[month]) {
+        const monthData = yearData[month]
+        const monthReturn = ((monthData.endValue - monthData.startValue) / monthData.startValue) * 100
+
+        months.push({
+          month,
+          return: monthReturn,
+          hasData: true,
+        })
+
+        yearEndValue = monthData.endValue
+
+        // Track drawdown within this year
+        yearPeak = Math.max(yearPeak, monthData.endValue)
+        const dd = ((monthData.minValue - yearPeak) / yearPeak) * 100
+        yearMinDD = Math.min(yearMinDD, dd)
+      } else {
+        months.push({
+          month,
+          return: null,
+          hasData: false,
+        })
+      }
+    }
+
+    // Calculate year total return
+    const yearReturn = ((yearEndValue - yearStartValue) / yearStartValue) * 100
+
+    years.push({
+      year,
+      months,
+      yearReturn,
+      yearMDD: yearMinDD,
+    })
+  }
+
+  // Sort years (newest first)
+  years.sort((a, b) => b.year - a.year)
+
+  // Calculate average monthly returns across all years
+  const monthlyAverages = Array(12).fill(0)
+  const monthlyCounts = Array(12).fill(0)
+
+  for (const yearData of years) {
+    for (const monthData of yearData.months) {
+      if (monthData.hasData && monthData.return !== null) {
+        monthlyAverages[monthData.month] += monthData.return
+        monthlyCounts[monthData.month]++
+      }
+    }
+  }
+
+  // Calculate averages
+  for (let i = 0; i < 12; i++) {
+    if (monthlyCounts[i] > 0) {
+      monthlyAverages[i] = monthlyAverages[i] / monthlyCounts[i]
+    }
+  }
+
+  // Calculate overall MDD
+  let overallPeak = initialBalance
+  let overallMDD = 0
+  for (const point of equityCurve) {
+    overallPeak = Math.max(overallPeak, point.balance)
+    const dd = ((point.balance - overallPeak) / overallPeak) * 100
+    overallMDD = Math.min(overallMDD, dd)
+  }
+
+  return {
+    years,
+    avgMonthlyReturns: {
+      months: monthlyAverages,
+      mdd: overallMDD,
+    },
+  }
+}

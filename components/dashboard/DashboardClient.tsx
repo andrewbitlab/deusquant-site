@@ -5,8 +5,10 @@ import { StatsPanel } from './StatsPanel'
 import { EquityCurve } from '../charts/EquityCurve'
 import { StrategyTable } from './StrategyTable'
 import { DateRangePicker, type DateRange, type QuickSelectPeriod } from './DateRangePicker'
+import { MonthlyReturnsTable } from '../strategy-report/charts'
 import type { StrategyData } from '@/lib/data/loader'
 import type { ProfitCurvePoint } from '@/lib/calculators/statistics'
+import type { MonthlyReturnsData } from '@/lib/types/strategy-report'
 import {
   buildProfitCurve,
   calculateDrawdowns,
@@ -16,6 +18,170 @@ import {
 
 interface DashboardClientProps {
   strategies: StrategyData[]
+}
+
+/**
+ * Calculate monthly returns from dollar-based profit curve
+ * Returns percentage returns for each month
+ */
+function calculateMonthlyReturnsFromDollarCurve(
+  profitCurve: ProfitCurvePoint[],
+  initialCapital: number,
+  scaleFactor: number,
+  dateRange?: DateRange
+): MonthlyReturnsData {
+  if (profitCurve.length === 0) {
+    return {
+      years: [],
+      avgMonthlyReturns: {
+        months: Array(12).fill(0),
+        mdd: 0,
+      },
+    }
+  }
+
+  // Group data points by year and month
+  type MonthData = {
+    startEquity: number
+    endEquity: number
+    minEquity: number
+    hasData: boolean
+  }
+  type YearData = { [month: number]: MonthData }
+  const yearlyData: { [year: number]: YearData } = {}
+
+  // Process each point in the profit curve
+  for (let i = 0; i < profitCurve.length; i++) {
+    const point = profitCurve[i]
+    const date = new Date(point.date)
+    const year = date.getFullYear()
+    const month = date.getMonth() // 0-11
+    const equity = initialCapital + point.profit
+
+    if (!yearlyData[year]) {
+      yearlyData[year] = {}
+    }
+
+    if (!yearlyData[year][month]) {
+      yearlyData[year][month] = {
+        startEquity: equity,
+        endEquity: equity,
+        minEquity: equity,
+        hasData: true,
+      }
+    } else {
+      // Update end equity and track minimum
+      yearlyData[year][month].endEquity = equity
+      yearlyData[year][month].minEquity = Math.min(yearlyData[year][month].minEquity, equity)
+    }
+  }
+
+  // Build yearly returns data
+  const allYears: import('@/lib/types/strategy-report').YearlyReturns[] = []
+
+  for (const [yearStr, yearData] of Object.entries(yearlyData)) {
+    const year = parseInt(yearStr)
+    const months: import('@/lib/types/strategy-report').MonthReturns[] = []
+
+    let yearStartEquity = initialCapital
+    let yearEndEquity = initialCapital
+    let yearMinDD = 0
+
+    // Find the actual start equity for this year
+    if (Object.keys(yearData).length > 0) {
+      const firstMonth = Math.min(...Object.keys(yearData).map((m) => parseInt(m)))
+      yearStartEquity = yearData[firstMonth].startEquity
+    }
+
+    // Build months array
+    for (let month = 0; month < 12; month++) {
+      if (yearData[month]) {
+        const monthData = yearData[month]
+        const monthReturn = ((monthData.endEquity - monthData.startEquity) / monthData.startEquity) * 100 * scaleFactor
+
+        months.push({
+          month,
+          return: monthReturn,
+          hasData: true,
+        })
+
+        yearEndEquity = monthData.endEquity
+
+        // Track minimum equity in this year
+        // MDD is calculated as worst drop from year start to any point in year
+        const ddFromYearStart = ((monthData.minEquity - yearStartEquity) / yearStartEquity) * 100 * scaleFactor
+        yearMinDD = Math.min(yearMinDD, ddFromYearStart)
+      } else {
+        months.push({
+          month,
+          return: null,
+          hasData: false,
+        })
+      }
+    }
+
+    // Calculate year total return (apply scale factor)
+    const yearReturn = ((yearEndEquity - yearStartEquity) / yearStartEquity) * 100 * scaleFactor
+
+    allYears.push({
+      year,
+      months,
+      yearReturn,
+      yearMDD: yearMinDD,
+    })
+  }
+
+  // Sort years (newest first)
+  allYears.sort((a, b) => b.year - a.year)
+
+  // Filter years to only show those within the date range (if provided)
+  const years = dateRange
+    ? allYears.filter((yearData) => {
+        const yearStr = yearData.year.toString()
+        const yearStart = `${yearStr}-01-01`
+        const yearEnd = `${yearStr}-12-31`
+        // Include year if it overlaps with the date range
+        return yearStart <= dateRange.endDate && yearEnd >= dateRange.startDate
+      })
+    : allYears
+
+  // Calculate average monthly returns across displayed years only
+  const monthlyAverages = Array(12).fill(0)
+  const monthlyCounts = Array(12).fill(0)
+
+  for (const yearData of years) {
+    for (const monthData of yearData.months) {
+      if (monthData.hasData && monthData.return !== null) {
+        monthlyAverages[monthData.month] += monthData.return
+        monthlyCounts[monthData.month]++
+      }
+    }
+  }
+
+  // Calculate averages
+  for (let i = 0; i < 12; i++) {
+    if (monthlyCounts[i] > 0) {
+      monthlyAverages[i] = monthlyAverages[i] / monthlyCounts[i]
+    }
+  }
+
+  // Calculate overall MDD from full profit curve (apply scale factor)
+  let overallPeak = initialCapital
+  let overallMDD = 0
+  for (const point of profitCurve) {
+    const equity = initialCapital + point.profit
+    overallPeak = Math.max(overallPeak, equity)
+    const dd = ((equity - overallPeak) / overallPeak) * 100 * scaleFactor
+    overallMDD = Math.min(overallMDD, dd)
+  }
+
+  return {
+    years,
+    avgMonthlyReturns: {
+      months: monthlyAverages,
+      mdd: overallMDD,
+    },
+  }
 }
 
 // Memoized for performance - prevents unnecessary recalculations
@@ -80,6 +246,7 @@ function DashboardClientComponent({ strategies }: DashboardClientProps) {
         normalizedProfitCurve: [],
         compoundedNormalizedCurve: [],
         forwardTestStartDate: undefined,
+        monthlyReturnsData: { years: [], avgMonthlyReturns: { months: Array(12).fill(0), mdd: 0 } },
       }
     }
 
@@ -201,6 +368,7 @@ function DashboardClientComponent({ strategies }: DashboardClientProps) {
         normalizedProfitCurve: [],
         compoundedNormalizedCurve: [],
         forwardTestStartDate: undefined,
+        monthlyReturnsData: { years: [], avgMonthlyReturns: { months: Array(12).fill(0), mdd: 0 } },
       }
     }
 
@@ -384,6 +552,12 @@ function DashboardClientComponent({ strategies }: DashboardClientProps) {
 
     // Step 13: Calculate metrics using SCALED percentages
     if (filteredCurve.length < 2) {
+      const earlyMonthlyReturnsData = calculateMonthlyReturnsFromDollarCurve(
+        portfolioEquityCurve,
+        realInitialCapital,
+        scaleFactor,
+        dateRange
+      )
       return {
         stats: [
           { label: 'Total Strategies', value: selected.length, format: 'number' as const },
@@ -397,6 +571,7 @@ function DashboardClientComponent({ strategies }: DashboardClientProps) {
         normalizedProfitCurve: normalizedCurve,
         compoundedNormalizedCurve: normalizedCurve, // Same as fixed when only 1 point
         forwardTestStartDate: undefined,
+        monthlyReturnsData: earlyMonthlyReturnsData,
       }
     }
 
@@ -470,12 +645,24 @@ function DashboardClientComponent({ strategies }: DashboardClientProps) {
       .map((s) => s.forwardTestStartDate!)
       .sort()[0] // Get earliest date
 
+    // Calculate monthly returns from FULL portfolio curve (before filtering)
+    // This ensures values are consistent regardless of date range filter
+    // Apply the same scale factor used for the chart
+    // Then filter which years to display based on dateRange
+    const monthlyReturnsData = calculateMonthlyReturnsFromDollarCurve(
+      portfolioEquityCurve,
+      realInitialCapital,
+      scaleFactor,
+      dateRange
+    )
+
     return {
       stats,
       profitCurve: filteredCurve,
       normalizedProfitCurve: normalizedCurve,
       compoundedNormalizedCurve,
       forwardTestStartDate,
+      monthlyReturnsData,
       // Debug data for logging
       debugData: {
         TARGET_DD_PERCENT,
@@ -635,6 +822,9 @@ function DashboardClientComponent({ strategies }: DashboardClientProps) {
           />
         </div>
       </div>
+
+      {/* Monthly Returns Table */}
+      <MonthlyReturnsTable data={portfolioData.monthlyReturnsData} />
 
       <div>
         <h2 className="font-display text-xl font-semibold mb-4 text-deus-gray">
