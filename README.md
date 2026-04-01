@@ -160,6 +160,11 @@ Required GitHub Actions secrets:
 - `NETLIFY_SITE_ID` (target Netlify site ID)
 - `NETLIFY_DATABASE_URL_PRODUCTION` (PostgreSQL connection string for production)
 
+Important:
+- `NETLIFY_SITE_ID` must point to an active (not cancelled/disabled) Netlify project.
+- `NETLIFY_AUTH_TOKEN` must have write access to that project (read-only tokens can validate site info but cannot sync env vars or trigger builds).
+- If Netlify env API returns `404` for your account/plan, set `DATABASE_URL` once in Netlify UI and keep CI for deployment triggering.
+
 Script used by workflow:
 - `scripts/ci/netlify-iac-deploy.sh`
 
