@@ -1,7 +1,8 @@
 export const siteConfig = {
   name: 'DEUS QUANT Portfolio',
-  description: 'Professional algorithmic trading strategies portfolio presentation system',
-  url: 'https://portfolio.deusquant.com',
+  description:
+    'Algorithmic trading strategy portfolio with MetaTrader 5 backtests, forward-test monitoring, equity curves, drawdown analysis and Quant R&D automation.',
+  url: 'https://deusquant.com',
   company: 'DEUS QUANT',
   aum: '~100M PLN',
   features: {

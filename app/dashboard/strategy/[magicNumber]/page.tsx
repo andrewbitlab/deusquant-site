@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import type { Metadata } from 'next'
 import { ArrowLeft } from 'lucide-react'
 import { loadStrategyReport, calculateMonthlyReturns } from '@/lib/data/strategy-report-loader'
 import { MetricsGrid } from '@/components/strategy-report/MetricsGrid'
@@ -16,6 +17,40 @@ interface PageProps {
   params: { magicNumber: string }
 }
 
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { magicNumber } = params
+
+  try {
+    const reportData = await loadStrategyReport(magicNumber)
+    const { strategyInfo, metrics } = reportData
+    const title = `${strategyInfo.name} ${strategyInfo.symbol} ${strategyInfo.timeframe} Strategy Report`
+    const description = `Deus Quant MT5 strategy report for ${strategyInfo.name}: ${strategyInfo.symbol} ${strategyInfo.timeframe}, ${metrics.totalTrades.toLocaleString('en-US')} trades, profit factor ${metrics.profitFactor.toFixed(2)}, Sharpe ratio ${metrics.sharpeRatio.toFixed(2)} and drawdown analysis.`
+
+    return {
+      title,
+      description,
+      alternates: {
+        canonical: `/dashboard/strategy/${magicNumber}`,
+      },
+      openGraph: {
+        title,
+        description,
+        url: `/dashboard/strategy/${magicNumber}`,
+        type: 'article',
+      },
+    }
+  } catch {
+    return {
+      title: `Strategy ${magicNumber} Report`,
+      description:
+        'Deus Quant MetaTrader 5 strategy report with trading metrics, equity curve, drawdown and monthly return analysis.',
+      alternates: {
+        canonical: `/dashboard/strategy/${magicNumber}`,
+      },
+    }
+  }
+}
+
 export default async function StrategyReportPage({ params }: PageProps) {
   const { magicNumber } = params
 
@@ -28,6 +63,42 @@ export default async function StrategyReportPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-bg-secondary">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'TechArticle',
+            '@id': `https://deusquant.com/dashboard/strategy/${magicNumber}#report`,
+            headline: `${reportData.strategyInfo.name} Strategy Report`,
+            description: `MetaTrader 5 strategy report for ${reportData.strategyInfo.symbol} ${reportData.strategyInfo.timeframe} with profit factor, drawdown, equity curve, monthly returns and holding-time analysis.`,
+            url: `https://deusquant.com/dashboard/strategy/${magicNumber}`,
+            publisher: {
+              '@id': 'https://deusquant.com/#organization',
+            },
+            about: [
+              'Algorithmic trading strategy analysis',
+              'MetaTrader 5 backtesting',
+              'Drawdown analysis',
+              'Equity curve analysis',
+            ],
+            mainEntity: {
+              '@type': 'Dataset',
+              name: `${reportData.strategyInfo.name} MT5 Strategy Metrics`,
+              identifier: reportData.strategyInfo.magicNumber,
+              variableMeasured: [
+                'Total net profit',
+                'Profit factor',
+                'Sharpe ratio',
+                'Balance drawdown',
+                'Equity drawdown',
+                'Total trades',
+                'Win rate',
+              ],
+            },
+          }),
+        }}
+      />
       {/* Header with back button */}
       <div className="bg-white border-b border-border-light">
         <div className="container mx-auto px-4 md:px-6 py-4">

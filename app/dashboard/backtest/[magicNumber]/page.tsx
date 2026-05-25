@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -10,6 +11,26 @@ export const revalidate = 0
 interface BacktestReportPageProps {
   params: {
     magicNumber: string
+  }
+}
+
+export function generateMetadata({ params }: BacktestReportPageProps): Metadata {
+  const { magicNumber } = params
+  const title = `Strategy ${magicNumber} MT5 Backtest Report`
+  const description = `Raw MetaTrader 5 backtest report for Deus Quant strategy ${magicNumber}, including strategy tester metrics, trade statistics and MAE/MFE chart analysis.`
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `/dashboard/backtest/${magicNumber}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `/dashboard/backtest/${magicNumber}`,
+      type: 'article',
+    },
   }
 }
 

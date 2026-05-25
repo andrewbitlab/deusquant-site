@@ -3,6 +3,11 @@ import Script from 'next/script'
 import { Inter, Montserrat, JetBrains_Mono } from 'next/font/google'
 import '@/styles/globals.css'
 
+const siteUrl = 'https://deusquant.com'
+const siteName = 'Deus Quant'
+const siteDescription =
+  'Algorithmic trading strategy portfolio with MetaTrader 5 backtests, forward-test monitoring, equity curves, drawdown analysis and Quant R&D automation.'
+
 // Optimized font loading with preload
 const inter = Inter({
   subsets: ['latin'],
@@ -26,35 +31,56 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Deus Quant',
-  description: 'Quantitative Trading & Portfolio Management',
+  metadataBase: new URL(siteUrl),
+  applicationName: siteName,
+  title: {
+    default: 'Deus Quant | Algorithmic Trading Strategy Portfolio',
+    template: '%s | Deus Quant',
+  },
+  description: siteDescription,
+  authors: [{ name: 'Deus Quant', url: siteUrl }],
+  creator: 'Deus Quant',
+  publisher: 'Deus Quant',
+  category: 'Finance',
   icons: {
     icon: '/images/logo.png',
     apple: '/images/logo.png',
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
   openGraph: {
-    siteName: 'Deus Quant',
-    title: 'Deus Quant',
-    description: 'Quantitative Trading & Portfolio Management',
-    url: 'https://deusquant.com',
+    siteName,
+    title: 'Deus Quant | Algorithmic Trading Strategy Portfolio',
+    description: siteDescription,
+    url: siteUrl,
     type: 'website',
+    locale: 'en_US',
     images: [
       {
-        url: 'https://deusquant.com/images/logo-sun-white.jpg',
+        url: '/images/logo-sun-white.jpg',
         width: 800,
         height: 600,
-        alt: 'Deus Quant',
+        alt: 'Deus Quant algorithmic trading strategy portfolio',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Deus Quant',
-    description: 'Quantitative Trading & Portfolio Management',
-    images: ['https://deusquant.com/images/logo-sun-white.jpg'],
+    title: 'Deus Quant | Algorithmic Trading Strategy Portfolio',
+    description: siteDescription,
+    images: ['/images/logo-sun-white.jpg'],
   },
   alternates: {
-    canonical: 'https://deusquant.com',
+    canonical: '/dashboard',
   },
 }
 
@@ -75,19 +101,25 @@ export default function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'Organization',
-              name: 'Deus Quant',
-              url: 'https://deusquant.com/',
-              logo: 'https://deusquant.com/images/logo-sun-white.jpg',
-              sameAs: [
-                'https://github.com/deusquant',
-                'https://www.linkedin.com/company/deus-quant',
-                'https://x.com/deusquant',
+              '@id': `${siteUrl}/#organization`,
+              name: siteName,
+              url: `${siteUrl}/`,
+              logo: `${siteUrl}/images/logo-sun-white.jpg`,
+              description: siteDescription,
+              knowsAbout: [
+                'Algorithmic trading strategy research',
+                'MetaTrader 5 backtesting',
+                'MQL5 strategy development',
+                'Forward-test monitoring',
+                'Equity curve analysis',
+                'Drawdown analysis',
+                'Quantitative trading automation',
               ],
             }),
           }}
         />
 
-        {/* JSON-LD: WebSite Schema with SearchAction */}
+        {/* JSON-LD: WebSite Schema */}
         <Script
           id="website-schema"
           type="application/ld+json"
@@ -95,12 +127,12 @@ export default function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'WebSite',
-              name: 'Deus Quant',
-              url: 'https://deusquant.com/',
-              potentialAction: {
-                '@type': 'SearchAction',
-                target: 'https://deusquant.com/?q={search_term_string}',
-                'query-input': 'required name=search_term_string',
+              '@id': `${siteUrl}/#website`,
+              name: siteName,
+              url: `${siteUrl}/`,
+              description: siteDescription,
+              publisher: {
+                '@id': `${siteUrl}/#organization`,
               },
             }),
           }}
